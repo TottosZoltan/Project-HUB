@@ -10,10 +10,14 @@ const app = express();
 
 const PORT = process.env.PORT || 10000;
 
-const FRONTEND_URL = "https://tottoszoltan.github.io";
-const BACKEND_URL = "https://project-hub-backend-1.onrender.com";
+const FRONTEND_URL =
+    "https://tottoszoltan.github.io";
 
-const STEAM_API_KEY = process.env.STEAM_API_KEY;
+const BACKEND_URL =
+    "https://project-hub-backend-1.onrender.com";
+
+const STEAM_API_KEY =
+    process.env.STEAM_API_KEY;
 
 
 // ======================================================
@@ -107,64 +111,53 @@ async function initializeDatabase() {
     await pool.query(`
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
-            username VARCHAR(100) UNIQUE NOT NULL,
+
+            username VARCHAR(100)
+                UNIQUE NOT NULL,
+
             email VARCHAR(255),
+
             password_hash TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+            created_at
+                TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+            updated_at
+                TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     `);
 
 
     await pool.query(`
         ALTER TABLE users
-        ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+        ADD COLUMN IF NOT EXISTS
+        email VARCHAR(255);
     `);
 
 
     await pool.query(`
         ALTER TABLE users
-        ADD COLUMN IF NOT EXISTS password_hash TEXT;
+        ADD COLUMN IF NOT EXISTS
+        password_hash TEXT;
     `);
 
 
     await pool.query(`
         ALTER TABLE users
-        ADD COLUMN IF NOT EXISTS created_at
+        ADD COLUMN IF NOT EXISTS
+        created_at
         TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     `);
 
 
     await pool.query(`
         ALTER TABLE users
-        ADD COLUMN IF NOT EXISTS updated_at
+        ADD COLUMN IF NOT EXISTS
+        updated_at
         TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     `);
 
-    await pool.query(`
-    CREATE TABLE IF NOT EXISTS steam_accounts (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-        steam_id VARCHAR(32) NOT NULL UNIQUE,
-        persona_name TEXT,
-        avatar_url TEXT,
-        linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-`);
 
-
-    await pool.query(`
-    CREATE TABLE IF NOT EXISTS steam_link_states (
-        id SERIAL PRIMARY KEY,
-        state_hash TEXT UNIQUE NOT NULL,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        expires_at TIMESTAMP NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-`);
-    
-    
     // ==================================================
     // AUTH TOKENS
     // ==================================================
@@ -198,6 +191,12 @@ async function initializeDatabase() {
         CREATE INDEX IF NOT EXISTS
         auth_tokens_expires_at_idx
         ON auth_tokens(expires_at);
+    `);
+
+
+    await pool.query(`
+        DELETE FROM auth_tokens
+        WHERE expires_at < CURRENT_TIMESTAMP;
     `);
 
 
@@ -242,61 +241,70 @@ async function initializeDatabase() {
 
     await pool.query(`
         ALTER TABLE notes
-        ADD COLUMN IF NOT EXISTS user_id INTEGER;
+        ADD COLUMN IF NOT EXISTS
+        user_id INTEGER;
     `);
 
 
     await pool.query(`
         ALTER TABLE notes
-        ADD COLUMN IF NOT EXISTS owner_tag TEXT;
+        ADD COLUMN IF NOT EXISTS
+        owner_tag TEXT;
     `);
 
 
     await pool.query(`
         ALTER TABLE notes
-        ADD COLUMN IF NOT EXISTS title TEXT
+        ADD COLUMN IF NOT EXISTS
+        title TEXT
         NOT NULL DEFAULT '';
     `);
 
 
     await pool.query(`
         ALTER TABLE notes
-        ADD COLUMN IF NOT EXISTS text TEXT
+        ADD COLUMN IF NOT EXISTS
+        text TEXT
         NOT NULL DEFAULT '';
     `);
 
 
     await pool.query(`
         ALTER TABLE notes
-        ADD COLUMN IF NOT EXISTS content TEXT
+        ADD COLUMN IF NOT EXISTS
+        content TEXT
         NOT NULL DEFAULT '';
     `);
 
 
     await pool.query(`
         ALTER TABLE notes
-        ADD COLUMN IF NOT EXISTS category VARCHAR(100)
+        ADD COLUMN IF NOT EXISTS
+        category VARCHAR(100)
         NOT NULL DEFAULT 'Egyéb';
     `);
 
 
     await pool.query(`
         ALTER TABLE notes
-        ADD COLUMN IF NOT EXISTS pinned BOOLEAN
+        ADD COLUMN IF NOT EXISTS
+        pinned BOOLEAN
         NOT NULL DEFAULT FALSE;
     `);
 
 
     await pool.query(`
         ALTER TABLE notes
-        ADD COLUMN IF NOT EXISTS created_at
+        ADD COLUMN IF NOT EXISTS
+        created_at
         TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     `);
 
 
     await pool.query(`
         ALTER TABLE notes
-        ADD COLUMN IF NOT EXISTS updated_at
+        ADD COLUMN IF NOT EXISTS
+        updated_at
         TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     `);
 
@@ -376,7 +384,7 @@ async function initializeDatabase() {
 
 
     // ==================================================
-    // USER ID INDEX
+    // NOTES INDEXEK
     // ==================================================
 
     await pool.query(`
@@ -385,10 +393,6 @@ async function initializeDatabase() {
         ON notes(user_id);
     `);
 
-
-    // ==================================================
-    // USER + UPDATED INDEX
-    // ==================================================
 
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
@@ -400,24 +404,10 @@ async function initializeDatabase() {
     `);
 
 
-    // ==================================================
-    // OWNER TAG INDEX
-    // ==================================================
-
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
         notes_owner_tag_idx
         ON notes(owner_tag);
-    `);
-
-
-    // ==================================================
-    // EXPIRED TOKENS TÖRLÉSE
-    // ==================================================
-
-    await pool.query(`
-        DELETE FROM auth_tokens
-        WHERE expires_at < CURRENT_TIMESTAMP;
     `);
 
 
@@ -570,74 +560,85 @@ async function initializeTasksDatabase() {
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS user_id INTEGER;
+        ADD COLUMN IF NOT EXISTS
+        user_id INTEGER;
     `);
 
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS owner_tag TEXT;
+        ADD COLUMN IF NOT EXISTS
+        owner_tag TEXT;
     `);
 
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS title TEXT
+        ADD COLUMN IF NOT EXISTS
+        title TEXT
         NOT NULL DEFAULT '';
     `);
 
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS description TEXT
+        ADD COLUMN IF NOT EXISTS
+        description TEXT
         NOT NULL DEFAULT '';
     `);
 
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS completed BOOLEAN
+        ADD COLUMN IF NOT EXISTS
+        completed BOOLEAN
         NOT NULL DEFAULT FALSE;
     `);
 
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS priority VARCHAR(50)
+        ADD COLUMN IF NOT EXISTS
+        priority VARCHAR(50)
         NOT NULL DEFAULT 'normal';
     `);
 
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS category VARCHAR(100)
+        ADD COLUMN IF NOT EXISTS
+        category VARCHAR(100)
         NOT NULL DEFAULT 'Egyéb';
     `);
 
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS due_date TIMESTAMP;
+        ADD COLUMN IF NOT EXISTS
+        due_date TIMESTAMP;
     `);
 
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS pinned BOOLEAN
+        ADD COLUMN IF NOT EXISTS
+        pinned BOOLEAN
         NOT NULL DEFAULT FALSE;
     `);
 
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS created_at
+        ADD COLUMN IF NOT EXISTS
+        created_at
         TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     `);
 
 
     await pool.query(`
         ALTER TABLE tasks
-        ADD COLUMN IF NOT EXISTS updated_at
+        ADD COLUMN IF NOT EXISTS
+        updated_at
         TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     `);
 
@@ -687,7 +688,7 @@ async function initializeTasksDatabase() {
 
 
     // ==================================================
-    // TASKS USER ID INDEX
+    // TASKS INDEXEK
     // ==================================================
 
     await pool.query(`
@@ -696,10 +697,6 @@ async function initializeTasksDatabase() {
         ON tasks(user_id);
     `);
 
-
-    // ==================================================
-    // TASKS USER + UPDATED INDEX
-    // ==================================================
 
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
@@ -710,10 +707,6 @@ async function initializeTasksDatabase() {
         );
     `);
 
-
-    // ==================================================
-    // TASKS OWNER TAG INDEX
-    // ==================================================
 
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
@@ -835,80 +828,7 @@ function getBearerToken(req) {
 
     return token;
 }
-async function getLinkedSteamAccount(userId) {
-    const result = await pool.query(
-        `
-        SELECT
-            id,
-            user_id,
-            steam_id,
-            persona_name,
-            avatar_url,
-            linked_at,
-            updated_at
-        FROM steam_accounts
-        WHERE user_id = $1
-        LIMIT 1
-        `,
-        [userId]
-    );
 
-    return result.rows[0] || null;
-}
-
-
-async function getAuthenticatedSteamUser(req) {
-    const bearerToken = getBearerToken(req);
-
-    if (!bearerToken) {
-        return null;
-    }
-
-    const user = await getUserFromAuthToken(bearerToken);
-
-    if (!user) {
-        return null;
-    }
-
-    return user;
-}
-
-
-function createSteamLinkState() {
-    return crypto.randomBytes(32).toString("hex");
-}
-
-
-function hashSteamLinkState(state) {
-    return crypto
-        .createHash("sha256")
-        .update(state)
-        .digest("hex");
-}
-
-
-async function getSteamPlayerSummary(steamId) {
-    if (!STEAM_API_KEY) {
-        return null;
-    }
-
-    const url =
-        "https://api.steampowered.com/" +
-        "ISteamUser/GetPlayerSummaries/v0002/" +
-        "?key=" + encodeURIComponent(STEAM_API_KEY) +
-        "&steamids=" + encodeURIComponent(steamId) +
-        "&format=json";
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-        return null;
-    }
-
-    const data = await response.json();
-
-    return data?.response?.players?.[0] || null;
-}
 
 // ======================================================
 // USER KERESÉSE TOKEN ALAPJÁN
@@ -993,8 +913,6 @@ async function getAuthenticatedUser(req) {
 
     }
 
-
-    // Session fallback
 
     if (
         req.session &&
@@ -1139,6 +1057,240 @@ async function getAuthenticatedSteamUser(req) {
 
 
 // ======================================================
+// STEAM ACCOUNT
+// ======================================================
+
+async function getLinkedSteamAccount(userId) {
+
+    const result =
+        await pool.query(
+            `
+            SELECT
+                id,
+                user_id,
+                steam_id,
+                steam_name,
+                avatar,
+                profile_url,
+                created_at,
+                updated_at
+
+            FROM steam_accounts
+
+            WHERE user_id = $1
+
+            LIMIT 1
+            `,
+            [
+                userId
+            ]
+        );
+
+
+    return result.rows[0] || null;
+}
+
+
+// ======================================================
+// STEAM LINK STATE
+// ======================================================
+
+function createSteamLinkState() {
+
+    return crypto
+        .randomBytes(32)
+        .toString("hex");
+}
+
+
+function hashSteamLinkState(state) {
+
+    return crypto
+        .createHash("sha256")
+        .update(state)
+        .digest("hex");
+}
+
+
+// ======================================================
+// STEAM PLAYER SUMMARY
+// ======================================================
+
+async function getSteamPlayerSummary(steamId) {
+
+    if (!STEAM_API_KEY) {
+
+        return null;
+
+    }
+
+
+    const url =
+        "https://api.steampowered.com/" +
+        "ISteamUser/GetPlayerSummaries/v0002/" +
+        "?key=" +
+        encodeURIComponent(
+            STEAM_API_KEY
+        ) +
+        "&steamids=" +
+        encodeURIComponent(
+            steamId
+        ) +
+        "&format=json";
+
+
+    const response =
+        await fetch(url);
+
+
+    if (!response.ok) {
+
+        return null;
+
+    }
+
+
+    const data =
+        await response.json();
+
+
+    return (
+        data?.response?.players?.[0] ||
+        null
+    );
+}
+
+
+// ======================================================
+// STEAM API GET
+// ======================================================
+
+async function steamApiGet(
+    interfaceName,
+    methodName,
+    version,
+    params
+) {
+
+    if (!STEAM_API_KEY) {
+
+        throw new Error(
+            "A STEAM_API_KEY nincs beállítva."
+        );
+
+    }
+
+
+    const query =
+        new URLSearchParams();
+
+
+    query.set(
+        "key",
+        STEAM_API_KEY
+    );
+
+
+    for (
+        const [key, value]
+        of Object.entries(
+            params || {}
+        )
+    ) {
+
+        if (
+            value !== undefined &&
+            value !== null
+        ) {
+
+            query.set(
+                key,
+                String(value)
+            );
+
+        }
+
+    }
+
+
+    query.set(
+        "format",
+        "json"
+    );
+
+
+    const url =
+        "https://api.steampowered.com/" +
+        encodeURIComponent(
+            interfaceName
+        ) +
+        "/" +
+        encodeURIComponent(
+            methodName
+        ) +
+        "/" +
+        encodeURIComponent(
+            version
+        ) +
+        "/?" +
+        query.toString();
+
+
+    const response =
+        await fetch(url);
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Steam API HTTP hiba: " +
+            response.status
+        );
+
+    }
+
+
+    return await response.json();
+}
+
+
+// ======================================================
+// STEAM KÉPEK
+// ======================================================
+
+function getSteamImageUrls(appId) {
+
+    const id =
+        String(appId);
+
+
+    return {
+
+        icon:
+            "https://media.steampowered.com/steamcommunity/public/images/apps/" +
+            id +
+            "/icon.jpg",
+
+        logo:
+            "https://media.steampowered.com/steamcommunity/public/images/apps/" +
+            id +
+            "/logo.jpg",
+
+        capsule:
+            "https://cdn.cloudflare.steamstatic.com/steam/apps/" +
+            id +
+            "/header.jpg",
+
+        background:
+            "https://cdn.cloudflare.steamstatic.com/steam/apps/" +
+            id +
+            "/page_bg_generated_v6b.jpg"
+
+    };
+}
+
+
+// ======================================================
 // OWNER TAG
 // ======================================================
 
@@ -1203,15 +1355,6 @@ app.post(
                 "string"
                     ? req.body.password
                     : "";
-
-
-            console.log(
-                "Regisztráció:",
-                {
-                    username,
-                    email
-                }
-            );
 
 
             if (
@@ -1322,10 +1465,8 @@ app.post(
                     FROM users
                     WHERE
                         email IS NOT NULL
-
                         AND LOWER(email) =
                             LOWER($1)
-
                     LIMIT 1
                     `,
                     [
@@ -1505,12 +1646,6 @@ app.post(
                     : "";
 
 
-            console.log(
-                "Bejelentkezési kísérlet:",
-                login
-            );
-
-
             if (
                 !login ||
                 !password
@@ -1544,12 +1679,9 @@ app.post(
                         LOWER($1)
 
                         OR (
-
                             email IS NOT NULL
-
                             AND LOWER(email) =
                                 LOWER($1)
-
                         )
 
                     LIMIT 1
@@ -1999,7 +2131,6 @@ app.get(
 
                     WHERE
                         user_id = $1
-
                         AND owner_tag = $2
 
                     ORDER BY
@@ -2611,7 +2742,6 @@ app.get(
 
                     WHERE
                         user_id = $1
-
                         AND owner_tag = $2
 
                     ORDER BY
@@ -2969,9 +3099,7 @@ app.put(
 
                     WHERE
                         id = $1
-
                         AND user_id = $2
-
                         AND owner_tag = $3
 
                     LIMIT 1
@@ -2995,9 +3123,233 @@ app.put(
                     message:
                         "A feladat nem található, vagy nem a te feladatod."
 
-                        const existingTask =
-                existingResult.rows[0];}
+                });
 
+            }
+
+
+            // EZ VOLT A HIBÁS RÉSZ
+            const existingTask =
+                existingResult.rows[0];
+
+
+            const title =
+                req.body.title !== undefined
+                    ? (
+                        typeof req.body.title ===
+                        "string"
+                            ? req.body.title.trim()
+                            : existingTask.title
+                    )
+                    : existingTask.title;
+
+
+            const description =
+                req.body.description !== undefined
+                    ? (
+                        typeof req.body.description ===
+                        "string"
+                            ? req.body.description
+                            : existingTask.description
+                    )
+                    : existingTask.description;
+
+
+            const completed =
+                req.body.completed !== undefined
+                    ? req.body.completed === true
+                    : existingTask.completed;
+
+
+            const priority =
+                req.body.priority !== undefined
+                    ? (
+                        typeof req.body.priority ===
+                        "string"
+                            ? req.body.priority.trim()
+                            : existingTask.priority
+                    )
+                    : existingTask.priority;
+
+
+            const category =
+                req.body.category !== undefined
+                    ? (
+                        typeof req.body.category ===
+                        "string"
+                            ? req.body.category.trim()
+                            : existingTask.category
+                    )
+                    : existingTask.category;
+
+
+            const pinned =
+                req.body.pinned !== undefined
+                    ? req.body.pinned === true
+                    : existingTask.pinned;
+
+
+            let dueDate =
+                existingTask.due_date;
+
+
+            if (
+                req.body.due_date !== undefined
+            ) {
+
+                if (
+                    req.body.due_date === null ||
+                    req.body.due_date === ""
+                ) {
+
+                    dueDate = null;
+
+                }
+                else {
+
+                    const parsedDate =
+                        new Date(
+                            req.body.due_date
+                        );
+
+
+                    if (
+                        Number.isNaN(
+                            parsedDate.getTime()
+                        )
+                    ) {
+
+                        return res.status(400).json({
+
+                            success: false,
+
+                            message:
+                                "Érvénytelen határidő."
+
+                        });
+
+                    }
+
+
+                    dueDate =
+                        parsedDate;
+
+                }
+
+            }
+
+
+            if (!title) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "A feladat címe kötelező."
+
+                });
+
+            }
+
+
+            const result =
+                await pool.query(
+                    `
+                    UPDATE tasks
+
+                    SET
+                        title = $1,
+                        description = $2,
+                        completed = $3,
+                        priority = $4,
+                        category = $5,
+                        due_date = $6,
+                        pinned = $7,
+                        updated_at =
+                            CURRENT_TIMESTAMP
+
+                    WHERE
+                        id = $8
+                        AND user_id = $9
+                        AND owner_tag = $10
+
+                    RETURNING
+                        id,
+                        user_id,
+                        owner_tag,
+                        title,
+                        description,
+                        completed,
+                        priority,
+                        category,
+                        due_date,
+                        pinned,
+                        created_at,
+                        updated_at
+                    `,
+                    [
+                        title,
+                        description,
+                        completed,
+                        priority || "normal",
+                        category || "Egyéb",
+                        dueDate,
+                        pinned,
+                        taskId,
+                        ownerUserId,
+                        ownerTag
+                    ]
+                );
+
+
+            if (
+                result.rows.length === 0
+            ) {
+
+                return res.status(404).json({
+
+                    success: false,
+
+                    message:
+                        "A feladat nem található, vagy nem a te feladatod."
+
+                });
+
+            }
+
+
+            return res.json({
+
+                success: true,
+
+                task:
+                    result.rows[0]
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "TASK UPDATE HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült módosítani a feladatot."
+
+            });
+
+        }
+
+    }
+);
 
             const title =
                 typeof req.body.title ===
