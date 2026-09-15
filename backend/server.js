@@ -1,19 +1,19 @@
 // =========================================
 // PROJECT HUB
-// BACKEND
+// BACKEND SERVER
 // =========================================
 
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
-const connectPgSimple = require("connect-pg-simple");
+const PgSession = require("connect-pg-simple")(session);
 const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 
 
 // =========================================
-// EXPRESS
+// APP
 // =========================================
 
 const app = express();
@@ -28,24 +28,23 @@ const PORT =
 
 
 // =========================================
-// POSTGRESQL
+// DATABASE
 // =========================================
 
-const pool =
-    new Pool({
+const pool = new Pool({
 
-        connectionString:
-            process.env.DATABASE_URL,
+    connectionString:
+        process.env.DATABASE_URL,
 
-        ssl: {
-            rejectUnauthorized: false
-        }
+    ssl: {
+        rejectUnauthorized: false
+    }
 
-    });
+});
 
 
 // =========================================
-// PROXY
+// MIDDLEWARE
 // =========================================
 
 app.set(
@@ -53,10 +52,6 @@ app.set(
     1
 );
 
-
-// =========================================
-// MIDDLEWARE
-// =========================================
 
 app.use(
     cors({
@@ -80,13 +75,8 @@ app.use(
 // SESSION
 // =========================================
 
-const PgSession =
-    connectPgSimple(
-        session
-    );
-
-
 app.use(
+
     session({
 
         store:
@@ -136,42 +126,168 @@ app.use(
         }
 
     })
+
 );
 
 
 // =========================================
-// STEAM ADATOK
+// DATABASE INITIALIZÁLÁS
 // =========================================
 
-const STEAM_API_KEY =
-    process.env.STEAM_API_KEY;
+async function initializeDatabase() {
 
-const STEAM_ID =
-    process.env.STEAM_ID;
+    try {
+
+        // =====================================
+        // USERS
+        // =====================================
+
+        await pool.query(`
+
+            CREATE TABLE IF NOT EXISTS users (
+
+                id SERIAL PRIMARY KEY,
+
+                username VARCHAR(100)
+                    UNIQUE
+                    NOT NULL,
+
+                password TEXT
+                    NOT NULL,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
+
+            );
+
+        `);
 
 
-// =========================================
-// AUTH TOKEN BEÁLLÍTÁSOK
-// =========================================
+        // =====================================
+        // AUTH TOKENS
+        // =====================================
 
-const AUTH_TOKEN_LIFETIME_MS =
-    1000 *
-    60 *
-    60 *
-    24 *
-    30;
+        await pool.query(`
+
+            CREATE TABLE IF NOT EXISTS auth_tokens (
+
+                id SERIAL PRIMARY KEY,
+
+                user_id INTEGER
+                    NOT NULL
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+
+                token_hash TEXT
+                    UNIQUE
+                    NOT NULL,
+
+                expires_at TIMESTAMP
+                    NOT NULL,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
+
+            );
+
+        `);
+
+
+        // =====================================
+        // NOTES
+        // =====================================
+
+        await pool.query(`
+
+            CREATE TABLE IF NOT EXISTS notes (
+
+                id SERIAL PRIMARY KEY,
+
+                user_id INTEGER
+                    NOT NULL
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+
+                title VARCHAR(255)
+                    NOT NULL,
+
+                text TEXT
+                    NOT NULL,
+
+                category VARCHAR(100)
+                    NOT NULL
+                    DEFAULT 'Egyéb',
+
+                pinned BOOLEAN
+                    NOT NULL
+                    DEFAULT FALSE,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP,
+
+                updated_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
+
+            );
+
+        `);
+
+
+        // =====================================
+        // NOTES INDEX
+        // =====================================
+
+        await pool.query(`
+
+            CREATE INDEX IF NOT EXISTS
+            notes_user_id_idx
+
+            ON notes(user_id);
+
+        `);
+
+
+        // =====================================
+        // RÉGI / LEJÁRT TOKENEK TÖRLÉSE
+        // =====================================
+
+        await pool.query(`
+
+            DELETE FROM auth_tokens
+
+            WHERE expires_at < CURRENT_TIMESTAMP;
+
+        `);
+
+
+        console.log(
+            "Adatbázis inicializálása sikeres."
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Adatbázis inicializálási hiba:",
+            error
+        );
+
+        throw error;
+
+    }
+
+}
 
 
 // =========================================
 // AUTH TOKEN SEGÉDFÜGGVÉNYEK
 // =========================================
 
-function generateAuthToken() {
 
-    return crypto.randomBytes(32).toString("hex");
-
-}
-
+// =========================================
+// TOKEN HASH
+// =========================================
 
 function hashAuthToken(token) {
 
@@ -183,59 +299,14 @@ function hashAuthToken(token) {
 }
 
 
-function getBearerToken(req) {
-
-    const authorization =
-        req.headers.authorization;
-
-
-    if (
-        !authorization ||
-        typeof authorization !== "string"
-    ) {
-
-        return null;
-
-    }
-
-
-    if (
-        !authorization.startsWith(
-            "Bearer "
-        )
-    ) {
-
-        return null;
-
-    }
-
-
-    const token =
-        authorization
-            .slice(7)
-            .trim();
-
-
-    if (!token) {
-
-        return null;
-
-    }
-
-
-    return token;
-
-}
-
-
 // =========================================
-// AUTH TOKEN LÉTREHOZÁSA
+// TOKEN LÉTREHOZÁSA
 // =========================================
 
 async function createAuthToken(userId) {
 
     const token =
-        generateAuthToken();
+        crypto.randomBytes(48).toString("hex");
 
 
     const tokenHash =
@@ -245,7 +316,11 @@ async function createAuthToken(userId) {
     const expiresAt =
         new Date(
             Date.now() +
-            AUTH_TOKEN_LIFETIME_MS
+            1000 *
+            60 *
+            60 *
+            24 *
+            30
         );
 
 
@@ -268,9 +343,13 @@ async function createAuthToken(userId) {
         `,
 
         [
+
             userId,
+
             tokenHash,
+
             expiresAt
+
         ]
 
     );
@@ -282,7 +361,44 @@ async function createAuthToken(userId) {
 
 
 // =========================================
-// AUTH TOKEN ELLENŐRZÉSE
+// BEARER TOKEN LEKÉRÉSE
+// =========================================
+
+function getBearerToken(req) {
+
+    const authorization =
+        req.headers.authorization;
+
+
+    if (
+        !authorization
+    ) {
+
+        return null;
+
+    }
+
+
+    if (
+        !authorization.startsWith(
+            "Bearer "
+        )
+    ) {
+
+        return null;
+
+    }
+
+
+    return authorization
+        .substring(7)
+        .trim();
+
+}
+
+
+// =========================================
+// FELHASZNÁLÓ LEKÉRÉSE TOKENBŐL
 // =========================================
 
 async function getUserFromAuthToken(token) {
@@ -304,19 +420,17 @@ async function getUserFromAuthToken(token) {
             `
             SELECT
                 u.id,
-                u.username,
-                u.email,
-                u.created_at,
-                a.id AS auth_token_id
+                u.username
 
-            FROM auth_tokens a
+            FROM auth_tokens at
 
             INNER JOIN users u
-                ON u.id = a.user_id
+                ON u.id = at.user_id
 
-            WHERE a.token_hash = $1
+            WHERE at.token_hash = $1
 
-              AND a.expires_at > CURRENT_TIMESTAMP
+              AND at.expires_at >
+                  CURRENT_TIMESTAMP
 
             LIMIT 1
             `,
@@ -343,14 +457,15 @@ async function getUserFromAuthToken(token) {
 
 
 // =========================================
-// BEJELENTKEZETT FELHASZNÁLÓ LEKÉRÉSE
+// AKTUÁLIS FELHASZNÁLÓ
+// TOKEN + SESSION
 // =========================================
 
 async function getAuthenticatedUser(req) {
 
-    // =========================================
-    // TOKEN ALAPÚ BEJELENTKEZÉS
-    // =========================================
+    // =====================================
+    // TOKEN
+    // =====================================
 
     const bearerToken =
         getBearerToken(req);
@@ -371,25 +486,19 @@ async function getAuthenticatedUser(req) {
                 user:
                     tokenUser,
 
-                authTokenId:
-                    tokenUser.auth_token_id,
-
-                method:
+                authType:
                     "token"
 
             };
 
         }
 
-
-        return null;
-
     }
 
 
-    // =========================================
-    // SESSION ALAPÚ BEJELENTKEZÉS
-    // =========================================
+    // =====================================
+    // SESSION
+    // =====================================
 
     if (
         req.session &&
@@ -402,11 +511,12 @@ async function getAuthenticatedUser(req) {
                 `
                 SELECT
                     id,
-                    username,
-                    email,
-                    created_at
+                    username
+
                 FROM users
+
                 WHERE id = $1
+
                 LIMIT 1
                 `,
 
@@ -418,26 +528,20 @@ async function getAuthenticatedUser(req) {
 
 
         if (
-            result.rows.length === 0
+            result.rows.length > 0
         ) {
 
-            return null;
+            return {
+
+                user:
+                    result.rows[0],
+
+                authType:
+                    "session"
+
+            };
 
         }
-
-
-        return {
-
-            user:
-                result.rows[0],
-
-            authTokenId:
-                null,
-
-            method:
-                "session"
-
-        };
 
     }
 
@@ -448,110 +552,7 @@ async function getAuthenticatedUser(req) {
 
 
 // =========================================
-// ADATBÁZIS
-// =========================================
-
-async function initializeDatabase() {
-
-    try {
-
-        await pool.query(`
-
-            CREATE TABLE IF NOT EXISTS users (
-
-                id SERIAL PRIMARY KEY,
-
-                username VARCHAR(50)
-                    NOT NULL UNIQUE,
-
-                email VARCHAR(255)
-                    NOT NULL UNIQUE,
-
-                password_hash TEXT
-                    NOT NULL,
-
-                created_at TIMESTAMP
-                    DEFAULT CURRENT_TIMESTAMP,
-
-                updated_at TIMESTAMP
-                    DEFAULT CURRENT_TIMESTAMP
-
-            );
-
-        `);
-
-
-        // =========================================
-        // AUTH TOKEN TÁBLA
-        // =========================================
-
-        await pool.query(`
-
-            CREATE TABLE IF NOT EXISTS auth_tokens (
-
-                id SERIAL PRIMARY KEY,
-
-                user_id INTEGER
-                    NOT NULL
-                    REFERENCES users(id)
-                    ON DELETE CASCADE,
-
-                token_hash TEXT
-                    NOT NULL UNIQUE,
-
-                expires_at TIMESTAMP
-                    NOT NULL,
-
-                created_at TIMESTAMP
-                    DEFAULT CURRENT_TIMESTAMP
-
-            );
-
-        `);
-
-
-        // =========================================
-        // LEJÁRT TOKENEK TÖRLÉSE
-        // =========================================
-
-        await pool.query(`
-
-            DELETE FROM auth_tokens
-            WHERE expires_at <= CURRENT_TIMESTAMP;
-
-        `);
-
-
-        console.log(
-            "PostgreSQL kapcsolat működik."
-        );
-
-
-        console.log(
-            "A users tábla készen áll."
-        );
-
-
-        console.log(
-            "Az auth_tokens tábla készen áll."
-        );
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "PostgreSQL hiba:",
-            error
-        );
-
-    }
-
-}
-
-
-// =========================================
-// ALAP TESZT
+// ALAP TESZT ROUTE
 // =========================================
 
 app.get(
@@ -564,7 +565,7 @@ app.get(
                 true,
 
             message:
-                "Project Hub backend működik!"
+                "Project Hub backend működik."
 
         });
 
@@ -573,7 +574,7 @@ app.get(
 
 
 // =========================================
-// REGISZTRÁCIÓ
+// REGISTER
 // =========================================
 
 app.post(
@@ -584,14 +585,16 @@ app.post(
 
             const {
                 username,
-                email,
                 password
             } = req.body;
 
 
+            // =================================
+            // ELLENŐRZÉS
+            // =================================
+
             if (
                 !username ||
-                !email ||
                 !password
             ) {
 
@@ -601,15 +604,19 @@ app.post(
                         false,
 
                     message:
-                        "Minden mező kitöltése kötelező."
+                        "A felhasználónév és a jelszó kötelező."
 
                 });
 
             }
 
 
+            const cleanUsername =
+                username.trim();
+
+
             if (
-                password.length < 8
+                cleanUsername.length < 3
             ) {
 
                 return res.status(400).json({
@@ -618,32 +625,50 @@ app.post(
                         false,
 
                     message:
-                        "A jelszónak legalább 8 karakteresnek kell lennie."
+                        "A felhasználónév legalább 3 karakter legyen."
 
                 });
 
             }
 
 
+            if (
+                password.length < 6
+            ) {
+
+                return res.status(400).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "A jelszó legalább 6 karakter legyen."
+
+                });
+
+            }
+
+
+            // =================================
+            // LÉTEZIK-E?
+            // =================================
+
             const existingUser =
                 await pool.query(
 
                     `
                     SELECT id
+
                     FROM users
-                    WHERE username = $1
-                       OR email = $2
+
+                    WHERE LOWER(username) =
+                          LOWER($1)
+
                     LIMIT 1
                     `,
 
                     [
-
-                        username.trim(),
-
-                        email
-                            .trim()
-                            .toLowerCase()
-
+                        cleanUsername
                     ]
 
                 );
@@ -659,19 +684,27 @@ app.post(
                         false,
 
                     message:
-                        "Ez a felhasználónév vagy e-mail már használatban van."
+                        "Ez a felhasználónév már foglalt."
 
                 });
 
             }
 
 
+            // =================================
+            // JELSZÓ HASH
+            // =================================
+
             const passwordHash =
                 await bcrypt.hash(
                     password,
-                    12
+                    10
                 );
 
+
+            // =================================
+            // USER LÉTREHOZÁSA
+            // =================================
 
             const result =
                 await pool.query(
@@ -680,31 +713,23 @@ app.post(
                     INSERT INTO users
                     (
                         username,
-                        email,
-                        password_hash
+                        password
                     )
 
                     VALUES
                     (
                         $1,
-                        $2,
-                        $3
+                        $2
                     )
 
                     RETURNING
                         id,
-                        username,
-                        email,
-                        created_at
+                        username
                     `,
 
                     [
 
-                        username.trim(),
-
-                        email
-                            .trim()
-                            .toLowerCase(),
+                        cleanUsername,
 
                         passwordHash
 
@@ -713,16 +738,81 @@ app.post(
                 );
 
 
+            const user =
+                result.rows[0];
+
+
+            // =================================
+            // SESSION
+            // =================================
+
+            req.session.userId =
+                user.id;
+
+            req.session.username =
+                user.username;
+
+
+            // =================================
+            // TOKEN
+            // =================================
+
+            const token =
+                await createAuthToken(
+                    user.id
+                );
+
+
+            await new Promise(
+                function (
+                    resolve,
+                    reject
+                ) {
+
+                    req.session.save(
+                        function (error) {
+
+                            if (error) {
+
+                                reject(
+                                    error
+                                );
+
+                            }
+
+                            else {
+
+                                resolve();
+
+                            }
+
+                        }
+                    );
+
+                }
+            );
+
+
             res.status(201).json({
 
                 success:
                     true,
 
                 message:
-                    "A regisztráció sikeres.",
+                    "Sikeres regisztráció.",
 
-                user:
-                    result.rows[0]
+                token:
+                    token,
+
+                user: {
+
+                    id:
+                        user.id,
+
+                    username:
+                        user.username
+
+                }
 
             });
 
@@ -742,7 +832,7 @@ app.post(
                     false,
 
                 message:
-                    "Nem sikerült létrehozni a felhasználót."
+                    "Nem sikerült a regisztráció."
 
             });
 
@@ -753,7 +843,7 @@ app.post(
 
 
 // =========================================
-// BEJELENTKEZÉS
+// LOGIN
 // =========================================
 
 app.post(
@@ -763,13 +853,13 @@ app.post(
         try {
 
             const {
-                email,
+                username,
                 password
             } = req.body;
 
 
             if (
-                !email ||
+                !username ||
                 !password
             ) {
 
@@ -779,7 +869,7 @@ app.post(
                         false,
 
                     message:
-                        "Az e-mail és a jelszó megadása kötelező."
+                        "A felhasználónév és a jelszó kötelező."
 
                 });
 
@@ -793,19 +883,18 @@ app.post(
                     SELECT
                         id,
                         username,
-                        email,
-                        password_hash
+                        password
+
                     FROM users
-                    WHERE email = $1
+
+                    WHERE LOWER(username) =
+                          LOWER($1)
+
                     LIMIT 1
                     `,
 
                     [
-
-                        email
-                            .trim()
-                            .toLowerCase()
-
+                        username.trim()
                     ]
 
                 );
@@ -821,7 +910,7 @@ app.post(
                         false,
 
                     message:
-                        "Hibás e-mail vagy jelszó."
+                        "Hibás felhasználónév vagy jelszó."
 
                 });
 
@@ -832,17 +921,16 @@ app.post(
                 result.rows[0];
 
 
-            const passwordMatches =
+            const passwordMatch =
                 await bcrypt.compare(
-
                     password,
-
-                    user.password_hash
-
+                    user.password
                 );
 
 
-            if (!passwordMatches) {
+            if (
+                !passwordMatch
+            ) {
 
                 return res.status(401).json({
 
@@ -850,16 +938,16 @@ app.post(
                         false,
 
                     message:
-                        "Hibás e-mail vagy jelszó."
+                        "Hibás felhasználónév vagy jelszó."
 
                 });
 
             }
 
 
-            // =========================================
-            // SESSION LÉTREHOZÁSA
-            // =========================================
+            // =================================
+            // SESSION
+            // =================================
 
             req.session.userId =
                 user.id;
@@ -868,67 +956,68 @@ app.post(
                 user.username;
 
 
-            // =========================================
-            // MOBIL AUTH TOKEN
-            // =========================================
+            // =================================
+            // TOKEN
+            // =================================
 
-            const authToken =
+            const token =
                 await createAuthToken(
                     user.id
                 );
 
 
-            req.session.save(
-                function (sessionError) {
+            await new Promise(
+                function (
+                    resolve,
+                    reject
+                ) {
 
-                    if (sessionError) {
+                    req.session.save(
+                        function (error) {
 
-                        console.error(
-                            "Session mentési hiba:",
-                            sessionError
-                        );
+                            if (error) {
 
-                        return res.status(500).json({
+                                reject(
+                                    error
+                                );
 
-                            success:
-                                false,
+                            }
 
-                            message:
-                                "A bejelentkezési munkamenetet nem sikerült elmenteni."
+                            else {
 
-                        });
+                                resolve();
 
-                    }
-
-
-                    res.json({
-
-                        success:
-                            true,
-
-                        message:
-                            "Sikeres bejelentkezés.",
-
-                        token:
-                            authToken,
-
-                        user: {
-
-                            id:
-                                user.id,
-
-                            username:
-                                user.username,
-
-                            email:
-                                user.email
+                            }
 
                         }
-
-                    });
+                    );
 
                 }
             );
+
+
+            res.json({
+
+                success:
+                    true,
+
+                message:
+                    "Sikeres bejelentkezés.",
+
+                token:
+                    token,
+
+                user: {
+
+                    id:
+                        user.id,
+
+                    username:
+                        user.username
+
+                }
+
+            });
 
         }
 
@@ -957,7 +1046,7 @@ app.post(
 
 
 // =========================================
-// BEJELENTKEZETT FELHASZNÁLÓ
+// AKTUÁLIS FELHASZNÁLÓ
 // =========================================
 
 app.get(
@@ -966,27 +1055,23 @@ app.get(
 
         try {
 
-            console.log(
-                "Session ellenőrzés:",
-                req.session
-            );
-
-
             const authenticatedUser =
                 await getAuthenticatedUser(
                     req
                 );
 
 
-            if (!authenticatedUser) {
+            if (
+                !authenticatedUser
+            ) {
 
                 return res.status(401).json({
 
                     success:
                         false,
 
-                    message:
-                        "Nincs bejelentkezett felhasználó."
+                    loggedIn:
+                        false
 
                 });
 
@@ -998,19 +1083,16 @@ app.get(
                 success:
                     true,
 
+                loggedIn:
+                    true,
+
                 user: {
 
                     id:
                         authenticatedUser.user.id,
 
                     username:
-                        authenticatedUser.user.username,
-
-                    email:
-                        authenticatedUser.user.email,
-
-                    created_at:
-                        authenticatedUser.user.created_at
+                        authenticatedUser.user.username
 
                 }
 
@@ -1021,7 +1103,7 @@ app.get(
         catch (error) {
 
             console.error(
-                "Felhasználó lekérdezési hiba:",
+                "Auth ellenőrzési hiba:",
                 error
             );
 
@@ -1031,8 +1113,11 @@ app.get(
                 success:
                     false,
 
+                loggedIn:
+                    false,
+
                 message:
-                    "Nem sikerült lekérni a felhasználói adatokat."
+                    "Nem sikerült ellenőrizni a munkamenetet."
 
             });
 
@@ -1043,7 +1128,7 @@ app.get(
 
 
 // =========================================
-// KIJELENTKEZÉS
+// LOGOUT
 // =========================================
 
 app.post(
@@ -1056,9 +1141,9 @@ app.post(
                 getBearerToken(req);
 
 
-            // =========================================
+            // =================================
             // TOKEN TÖRLÉSE
-            // =========================================
+            // =================================
 
             if (bearerToken) {
 
@@ -1072,6 +1157,7 @@ app.post(
 
                     `
                     DELETE FROM auth_tokens
+
                     WHERE token_hash = $1
                     `,
 
@@ -1084,52 +1170,42 @@ app.post(
             }
 
 
-            // =========================================
+            // =================================
             // SESSION TÖRLÉSE
-            // =========================================
+            // =================================
 
             if (
                 req.session
             ) {
 
-                req.session.destroy(
-                    function (error) {
+                await new Promise(
+                    function (
+                        resolve
+                    ) {
 
-                        if (error) {
+                        req.session.destroy(
+                            function () {
 
-                            console.error(
-                                "Kijelentkezési session hiba:",
-                                error
-                            );
+                                resolve();
 
-                        }
-
-
-                        res.clearCookie(
-                            "connect.sid",
-                            {
-                                path:
-                                    "/"
                             }
                         );
-
-
-                        res.json({
-
-                            success:
-                                true,
-
-                            message:
-                                "Sikeres kijelentkezés."
-
-                        });
 
                     }
                 );
 
-                return;
-
             }
+
+
+            res.clearCookie(
+                "connect.sid",
+                {
+
+                    path:
+                        "/"
+
+                }
+            );
 
 
             res.json({
@@ -1169,7 +1245,7 @@ app.post(
 
 
 // =========================================
-// ADATBÁZIS TESZT
+// DATABASE TESZT
 // =========================================
 
 app.get(
@@ -1180,7 +1256,7 @@ app.get(
 
             const result =
                 await pool.query(
-                    "SELECT NOW() AS current_time"
+                    "SELECT NOW() AS now"
                 );
 
 
@@ -1189,11 +1265,11 @@ app.get(
                 success:
                     true,
 
-                message:
-                    "PostgreSQL kapcsolat működik.",
+                database:
+                    "connected",
 
                 time:
-                    result.rows[0].current_time
+                    result.rows[0].now
 
             });
 
@@ -1202,7 +1278,7 @@ app.get(
         catch (error) {
 
             console.error(
-                "Adatbázis teszt hiba:",
+                "Database teszt hiba:",
                 error
             );
 
@@ -1212,8 +1288,11 @@ app.get(
                 success:
                     false,
 
+                database:
+                    "error",
+
                 message:
-                    "Nem sikerült kapcsolódni az adatbázishoz."
+                    error.message
 
             });
 
@@ -1224,7 +1303,566 @@ app.get(
 
 
 // =========================================
-// STEAM JÁTÉKOK
+// JEGYZETEK API
+// =========================================
+
+
+// =========================================
+// ÖSSZES JEGYZET
+// =========================================
+
+app.get(
+    "/api/notes",
+    async function (req, res) {
+
+        try {
+
+            const authenticatedUser =
+                await getAuthenticatedUser(
+                    req
+                );
+
+
+            if (
+                !authenticatedUser
+            ) {
+
+                return res.status(401).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "A jegyzetek megtekintéséhez be kell jelentkezni."
+
+                });
+
+            }
+
+
+            const result =
+                await pool.query(
+
+                    `
+                    SELECT
+                        id,
+                        title,
+                        text,
+                        category,
+                        pinned,
+                        created_at,
+                        updated_at
+
+                    FROM notes
+
+                    WHERE user_id = $1
+
+                    ORDER BY
+                        pinned DESC,
+                        created_at DESC
+                    `,
+
+                    [
+                        authenticatedUser.user.id
+                    ]
+
+                );
+
+
+            res.json({
+
+                success:
+                    true,
+
+                notes:
+                    result.rows
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Jegyzetek lekérési hiba:",
+                error
+            );
+
+
+            res.status(500).json({
+
+                success:
+                    false,
+
+                message:
+                    "Nem sikerült lekérni a jegyzeteket."
+
+            });
+
+        }
+
+    }
+);
+
+
+// =========================================
+// ÚJ JEGYZET
+// =========================================
+
+app.post(
+    "/api/notes",
+    async function (req, res) {
+
+        try {
+
+            const authenticatedUser =
+                await getAuthenticatedUser(
+                    req
+                );
+
+
+            if (
+                !authenticatedUser
+            ) {
+
+                return res.status(401).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Jegyzet létrehozásához be kell jelentkezni."
+
+                });
+
+            }
+
+
+            const {
+                title,
+                text,
+                category,
+                pinned
+            } = req.body;
+
+
+            if (
+                !title ||
+                !text
+            ) {
+
+                return res.status(400).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "A cím és a jegyzet szövege kötelező."
+
+                });
+
+            }
+
+
+            const result =
+                await pool.query(
+
+                    `
+                    INSERT INTO notes
+                    (
+                        user_id,
+                        title,
+                        text,
+                        category,
+                        pinned
+                    )
+
+                    VALUES
+                    (
+                        $1,
+                        $2,
+                        $3,
+                        $4,
+                        $5
+                    )
+
+                    RETURNING
+                        id,
+                        title,
+                        text,
+                        category,
+                        pinned,
+                        created_at,
+                        updated_at
+                    `,
+
+                    [
+
+                        authenticatedUser.user.id,
+
+                        title.trim(),
+
+                        text.trim(),
+
+                        category ||
+                            "Egyéb",
+
+                        pinned === true
+
+                    ]
+
+                );
+
+
+            res.status(201).json({
+
+                success:
+                    true,
+
+                note:
+                    result.rows[0]
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Jegyzet létrehozási hiba:",
+                error
+            );
+
+
+            res.status(500).json({
+
+                success:
+                    false,
+
+                message:
+                    "Nem sikerült létrehozni a jegyzetet."
+
+            });
+
+        }
+
+    }
+);
+
+
+// =========================================
+// JEGYZET SZERKESZTÉSE
+// =========================================
+
+app.put(
+    "/api/notes/:id",
+    async function (req, res) {
+
+        try {
+
+            const authenticatedUser =
+                await getAuthenticatedUser(
+                    req
+                );
+
+
+            if (
+                !authenticatedUser
+            ) {
+
+                return res.status(401).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "A jegyzet szerkesztéséhez be kell jelentkezni."
+
+                });
+
+            }
+
+
+            const noteId =
+                Number(req.params.id);
+
+
+            if (
+                !Number.isInteger(noteId)
+            ) {
+
+                return res.status(400).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Érvénytelen jegyzet azonosító."
+
+                });
+
+            }
+
+
+            const {
+                title,
+                text,
+                category,
+                pinned
+            } = req.body;
+
+
+            if (
+                !title ||
+                !text
+            ) {
+
+                return res.status(400).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "A cím és a jegyzet szövege kötelező."
+
+                });
+
+            }
+
+
+            const result =
+                await pool.query(
+
+                    `
+                    UPDATE notes
+
+                    SET
+                        title = $1,
+                        text = $2,
+                        category = $3,
+                        pinned = $4,
+                        updated_at = CURRENT_TIMESTAMP
+
+                    WHERE id = $5
+
+                      AND user_id = $6
+
+                    RETURNING
+                        id,
+                        title,
+                        text,
+                        category,
+                        pinned,
+                        created_at,
+                        updated_at
+                    `,
+
+                    [
+
+                        title.trim(),
+
+                        text.trim(),
+
+                        category ||
+                            "Egyéb",
+
+                        pinned === true,
+
+                        noteId,
+
+                        authenticatedUser.user.id
+
+                    ]
+
+                );
+
+
+            if (
+                result.rows.length === 0
+            ) {
+
+                return res.status(404).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "A jegyzet nem található."
+
+                });
+
+            }
+
+
+            res.json({
+
+                success:
+                    true,
+
+                note:
+                    result.rows[0]
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Jegyzet szerkesztési hiba:",
+                error
+            );
+
+
+            res.status(500).json({
+
+                success:
+                    false,
+
+                message:
+                    "Nem sikerült módosítani a jegyzetet."
+
+            });
+
+        }
+
+    }
+);
+
+
+// =========================================
+// JEGYZET TÖRLÉSE
+// =========================================
+
+app.delete(
+    "/api/notes/:id",
+    async function (req, res) {
+
+        try {
+
+            const authenticatedUser =
+                await getAuthenticatedUser(
+                    req
+                );
+
+
+            if (
+                !authenticatedUser
+            ) {
+
+                return res.status(401).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "A jegyzet törléséhez be kell jelentkezni."
+
+                });
+
+            }
+
+
+            const noteId =
+                Number(req.params.id);
+
+
+            if (
+                !Number.isInteger(noteId)
+            ) {
+
+                return res.status(400).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Érvénytelen jegyzet azonosító."
+
+                });
+
+            }
+
+
+            const result =
+                await pool.query(
+
+                    `
+                    DELETE FROM notes
+
+                    WHERE id = $1
+
+                      AND user_id = $2
+
+                    RETURNING id
+                    `,
+
+                    [
+
+                        noteId,
+
+                        authenticatedUser.user.id
+
+                    ]
+
+                );
+
+
+            if (
+                result.rows.length === 0
+            ) {
+
+                return res.status(404).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "A jegyzet nem található."
+
+                });
+
+            }
+
+
+            res.json({
+
+                success:
+                    true,
+
+                message:
+                    "A jegyzet törölve."
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Jegyzet törlési hiba:",
+                error
+            );
+
+
+            res.status(500).json({
+
+                success:
+                    false,
+
+                message:
+                    "Nem sikerült törölni a jegyzetet."
+
+            });
+
+        }
+
+    }
+);
+
+
+// =========================================
+// STEAM API
 // =========================================
 
 app.get(
@@ -1233,9 +1871,16 @@ app.get(
 
         try {
 
+            const steamApiKey =
+                process.env.STEAM_API_KEY;
+
+            const steamId =
+                process.env.STEAM_ID;
+
+
             if (
-                !STEAM_API_KEY ||
-                !STEAM_ID
+                !steamApiKey ||
+                !steamId
             ) {
 
                 return res.status(500).json({
@@ -1244,31 +1889,33 @@ app.get(
                         false,
 
                     message:
-                        "A Steam API beállítások hiányoznak."
+                        "A Steam API nincs megfelelően beállítva."
 
                 });
 
             }
 
 
-            const url =
+            const steamUrl =
                 "https://api.steampowered.com/" +
                 "IPlayerService/GetOwnedGames/v0001/" +
                 "?key=" +
                 encodeURIComponent(
-                    STEAM_API_KEY
+                    steamApiKey
                 ) +
                 "&steamid=" +
                 encodeURIComponent(
-                    STEAM_ID
+                    steamId
                 ) +
+                "&format=json" +
                 "&include_appinfo=1" +
-                "&include_played_free_games=1" +
-                "&format=json";
+                "&include_played_free_games=1";
 
 
             const response =
-                await fetch(url);
+                await fetch(
+                    steamUrl
+                );
 
 
             if (
@@ -1292,8 +1939,11 @@ app.get(
                 success:
                     true,
 
-                data:
-                    data.response || {}
+                games:
+                    data.response &&
+                    data.response.games
+                        ? data.response.games
+                        : []
 
             });
 
@@ -1313,11 +1963,43 @@ app.get(
                     false,
 
                 message:
-                    "Nem sikerült lekérni a Steam adatokat."
+                    "Nem sikerült lekérni a Steam játékokat."
 
             });
 
         }
+
+    }
+);
+
+
+// =========================================
+// HIBAKEZELÉS
+// =========================================
+
+app.use(
+    function (
+        error,
+        req,
+        res,
+        next
+    ) {
+
+        console.error(
+            "Szerverhiba:",
+            error
+        );
+
+
+        res.status(500).json({
+
+            success:
+                false,
+
+            message:
+                "Belső szerverhiba."
+
+        });
 
     }
 );
@@ -1329,24 +2011,48 @@ app.get(
 
 async function startServer() {
 
-    await initializeDatabase();
+    try {
+
+        await initializeDatabase();
 
 
-    app.listen(
+        app.listen(
+            PORT,
+            function () {
 
-        PORT,
+                console.log(
+                    "================================="
+                );
 
-        "0.0.0.0",
+                console.log(
+                    "PROJECT HUB BACKEND"
+                );
 
-        function () {
+                console.log(
+                    "Szerver fut a porton:",
+                    PORT
+                );
 
-            console.log(
-                `Project Hub backend fut a ${PORT} porton.`
-            );
+                console.log(
+                    "================================="
+                );
 
-        }
+            }
+        );
 
-    );
+    }
+
+    catch (error) {
+
+        console.error(
+            "A szerver nem tudott elindulni:",
+            error
+        );
+
+
+        process.exit(1);
+
+    }
 
 }
 
