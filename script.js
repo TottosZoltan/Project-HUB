@@ -1,225 +1,222 @@
-document.addEventListener("DOMContentLoaded", function () {
-
-    // =========================================
-    // MENÜ
-    // =========================================
-
-    const menuButton =
-        document.getElementById("menuButton");
-
-    const closeMenu =
-        document.getElementById("closeMenu");
-
-    const sideMenu =
-        document.getElementById("sideMenu");
-
-    const menuOverlay =
-        document.getElementById("menuOverlay");
+// =========================================
+// PROJECT HUB
+// FŐ SCRIPT
+// =========================================
 
 
-    if (
-        !menuButton ||
-        !closeMenu ||
-        !sideMenu ||
-        !menuOverlay
-    ) {
+// =========================================
+// DOM BETÖLTÉS
+// =========================================
 
-        console.error(
-            "A menü egyik eleme hiányzik az index.html-ből."
-        );
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
 
-        return;
+        // =========================================
+        // BACKEND
+        // =========================================
 
-    }
+        const BACKEND_URL =
+            "https://project-hub-backend-1.onrender.com";
 
 
-    menuButton.addEventListener(
-        "click",
-        function () {
+        // =========================================
+        // ELEMEK
+        // =========================================
 
-            sideMenu.classList.add("open");
-            menuOverlay.classList.add("open");
+        const sideMenu =
+            document.getElementById("sideMenu");
+
+        const menuOverlay =
+            document.getElementById("menuOverlay");
+
+        const menuButton =
+            document.getElementById("menuButton");
+
+        const closeMenu =
+            document.getElementById("closeMenu");
+
+        const loginMenuItem =
+            document.getElementById("loginMenuItem");
+
+        const userMenuItem =
+            document.getElementById("userMenuItem");
+
+        const usernameDisplay =
+            document.getElementById("usernameDisplay");
+
+        const logoutButton =
+            document.getElementById("logoutButton");
+
+
+        // =========================================
+        // MENÜ MEGNYITÁSA
+        // =========================================
+
+        if (menuButton && sideMenu) {
+
+            menuButton.addEventListener(
+                "click",
+                function () {
+
+                    sideMenu.classList.add(
+                        "active"
+                    );
+
+                    if (menuOverlay) {
+
+                        menuOverlay.classList.add(
+                            "active"
+                        );
+
+                    }
+
+                }
+            );
 
         }
-    );
 
 
-    closeMenu.addEventListener(
-        "click",
-        function () {
+        // =========================================
+        // MENÜ BEZÁRÁSA
+        // =========================================
 
-            sideMenu.classList.remove("open");
-            menuOverlay.classList.remove("open");
+        function closeSideMenu() {
+
+            if (sideMenu) {
+
+                sideMenu.classList.remove(
+                    "active"
+                );
+
+            }
+
+
+            if (menuOverlay) {
+
+                menuOverlay.classList.remove(
+                    "active"
+                );
+
+            }
 
         }
-    );
 
 
-    menuOverlay.addEventListener(
-        "click",
-        function () {
+        if (closeMenu) {
 
-            sideMenu.classList.remove("open");
-            menuOverlay.classList.remove("open");
+            closeMenu.addEventListener(
+                "click",
+                closeSideMenu
+            );
 
         }
-    );
 
 
-    // =========================================
-    // BACKEND
-    // =========================================
+        if (menuOverlay) {
 
-    const BACKEND_URL =
-        "https://project-hub-backend-1.onrender.com";
+            menuOverlay.addEventListener(
+                "click",
+                closeSideMenu
+            );
 
-
-    // =========================================
-    // AUTH MENÜ ELEMEK
-    // =========================================
-
-    const loginMenuItem =
-        document.getElementById("loginMenuItem");
-
-    const userMenuItem =
-        document.getElementById("userMenuItem");
-
-    const usernameDisplay =
-        document.getElementById("usernameDisplay");
-
-    const logoutButton =
-        document.getElementById("logoutButton");
+        }
 
 
-    if (
-        !loginMenuItem ||
-        !userMenuItem ||
-        !usernameDisplay ||
-        !logoutButton
-    ) {
+        // =========================================
+        // MENÜ LINK BEZÁRÁSA
+        // =========================================
 
-        console.error(
-            "Az auth menü egyik eleme hiányzik."
-        );
-
-        return;
-
-    }
+        const menuLinks =
+            document.querySelectorAll(
+                ".menu-links a"
+            );
 
 
-    // =========================================
-    // SESSION ELLENŐRZÉS
-    // =========================================
+        menuLinks.forEach(
+            function (link) {
 
-    async function checkLogin() {
+                link.addEventListener(
+                    "click",
+                    function () {
 
-        try {
+                        if (
+                            link.id !==
+                            "logoutButton"
+                        ) {
 
-            const response =
-                await fetch(
-                    BACKEND_URL +
-                    "/api/auth/me",
-                    {
-                        method: "GET",
-                        credentials: "include"
+                            closeSideMenu();
+
+                        }
+
                     }
                 );
 
-
-            const result =
-                await response.json();
-
-
-            if (
-                response.ok &&
-                result.success &&
-                result.user
-            ) {
-
-                // =========================================
-                // BEJELENTKEZVE
-                // =========================================
-
-                loginMenuItem.style.display =
-                    "none";
-
-                userMenuItem.style.display =
-                    "flex";
-
-                logoutButton.style.display =
-                    "flex";
-
-                usernameDisplay.textContent =
-                    result.user.username;
-
-
-                console.log(
-                    "Bejelentkezett felhasználó:",
-                    result.user
-                );
-
             }
+        );
 
-            else {
 
-                // =========================================
-                // KIJELENTKEZVE
-                // =========================================
+        // =========================================
+        // AUTH TOKEN
+        // =========================================
 
-                loginMenuItem.style.display =
-                    "flex";
+        function getAuthToken() {
 
-                userMenuItem.style.display =
-                    "none";
-
-                logoutButton.style.display =
-                    "none";
-
-            }
-
-        }
-
-        catch (error) {
-
-            console.error(
-                "Session ellenőrzési hiba:",
-                error
+            return localStorage.getItem(
+                "projectHubAuthToken"
             );
 
-            loginMenuItem.style.display =
-                "flex";
+        }
 
-            userMenuItem.style.display =
-                "none";
 
-            logoutButton.style.display =
-                "none";
+        // =========================================
+        // AUTH HEADERS
+        // =========================================
+
+        function getAuthHeaders() {
+
+            const token =
+                getAuthToken();
+
+
+            if (!token) {
+
+                return {};
+
+            }
+
+
+            return {
+
+                Authorization:
+                    "Bearer " +
+                    token
+
+            };
 
         }
 
-    }
 
+        // =========================================
+        // BEJELENTKEZETT FELHASZNÁLÓ ELLENŐRZÉSE
+        // =========================================
 
-    // =========================================
-    // KIJELENTKEZÉS
-    // =========================================
-
-    logoutButton.addEventListener(
-        "click",
-        async function (event) {
-
-            event.preventDefault();
-
+        async function checkAuthentication() {
 
             try {
 
                 const response =
                     await fetch(
                         BACKEND_URL +
-                        "/api/auth/logout",
+                        "/api/auth/me",
                         {
-                            method: "POST",
-                            credentials: "include"
+                            method: "GET",
+
+                            headers:
+                                getAuthHeaders(),
+
+                            credentials:
+                                "include"
                         }
                     );
 
@@ -228,43 +225,231 @@ document.addEventListener("DOMContentLoaded", function () {
                     await response.json();
 
 
+                console.log(
+                    "Bejelentkezés ellenőrzése:",
+                    result
+                );
+
+
                 if (
                     response.ok &&
-                    result.success
+                    result.success &&
+                    result.user
                 ) {
 
-                    window.location.reload();
+                    showLoggedInUser(
+                        result.user
+                    );
+
+                    return;
 
                 }
 
-                else {
 
-                    console.error(
-                        "Kijelentkezési hiba:",
-                        result
+                // =========================================
+                // ÉRVÉNYTELEN TOKEN TÖRLÉSE
+                // =========================================
+
+                if (
+                    response.status === 401
+                ) {
+
+                    localStorage.removeItem(
+                        "projectHubAuthToken"
                     );
 
                 }
+
+
+                showLoggedOutUser();
 
             }
 
             catch (error) {
 
                 console.error(
-                    "Kijelentkezési hiba:",
+                    "Bejelentkezés ellenőrzési hiba:",
                     error
                 );
+
+
+                // =========================================
+                // HIBA ESETÉN NEM TÖRÖLJÜK
+                // A TOKENT AUTOMATIKUSAN
+                // =========================================
+
+                showLoggedOutUser();
 
             }
 
         }
-    );
 
 
-    // =========================================
-    // INDÍTÁS
-    // =========================================
+        // =========================================
+        // BEJELENTKEZETT ÁLLAPOT
+        // =========================================
 
-    checkLogin();
+        function showLoggedInUser(user) {
 
-});
+            if (loginMenuItem) {
+
+                loginMenuItem.style.display =
+                    "none";
+
+            }
+
+
+            if (userMenuItem) {
+
+                userMenuItem.style.display =
+                    "block";
+
+            }
+
+
+            if (logoutButton) {
+
+                logoutButton.style.display =
+                    "block";
+
+            }
+
+
+            if (usernameDisplay) {
+
+                usernameDisplay.textContent =
+                    user.username;
+
+            }
+
+        }
+
+
+        // =========================================
+        // KIJELENTKEZETT ÁLLAPOT
+        // =========================================
+
+        function showLoggedOutUser() {
+
+            if (loginMenuItem) {
+
+                loginMenuItem.style.display =
+                    "block";
+
+            }
+
+
+            if (userMenuItem) {
+
+                userMenuItem.style.display =
+                    "none";
+
+            }
+
+
+            if (logoutButton) {
+
+                logoutButton.style.display =
+                    "none";
+
+            }
+
+
+            if (usernameDisplay) {
+
+                usernameDisplay.textContent =
+                    "";
+
+            }
+
+        }
+
+
+        // =========================================
+        // KIJELENTKEZÉS
+        // =========================================
+
+        if (logoutButton) {
+
+            logoutButton.addEventListener(
+                "click",
+                async function (event) {
+
+                    event.preventDefault();
+
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                BACKEND_URL +
+                                "/api/auth/logout",
+                                {
+                                    method: "POST",
+
+                                    headers:
+                                        getAuthHeaders(),
+
+                                    credentials:
+                                        "include"
+                                }
+                            );
+
+
+                        const result =
+                            await response.json();
+
+
+                        console.log(
+                            "Kijelentkezés:",
+                            result
+                        );
+
+                    }
+
+                    catch (error) {
+
+                        console.error(
+                            "Kijelentkezési hiba:",
+                            error
+                        );
+
+                    }
+
+
+                    // =========================================
+                    // TOKEN TÖRLÉSE
+                    // =========================================
+
+                    localStorage.removeItem(
+                        "projectHubAuthToken"
+                    );
+
+
+                    // =========================================
+                    // FELHASZNÁLÓI ÁLLAPOT TÖRLÉSE
+                    // =========================================
+
+                    showLoggedOutUser();
+
+
+                    // =========================================
+                    // MENÜ BEZÁRÁSA
+                    // =========================================
+
+                    closeSideMenu();
+
+                }
+            );
+
+        }
+
+
+        // =========================================
+        // AUTH ELLENŐRZÉS INDÍTÁSA
+        // =========================================
+
+        checkAuthentication();
+
+    }
+);
