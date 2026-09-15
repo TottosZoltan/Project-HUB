@@ -428,3 +428,33 @@ main {
     }
 
 }
+/* =========================
+   VISSZA GOMB
+========================= */
+
+.back-button {
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #292d38;
+    border-radius: 12px;
+
+    background: #151820;
+    color: #ffffff;
+
+    font-size: 24px;
+    line-height: 1;
+
+    text-decoration: none;
+
+    transition: 0.2s;
+}
+
+.back-button:active {
+    transform: scale(0.92);
+    background: #20242e;
+}
