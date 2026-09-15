@@ -1,7 +1,16 @@
 // =========================================
 // PROJECT HUB
 // JEGYZETEK MODUL
+// USERHEZ KÖTÖTT - POSTGRESQL
 // =========================================
+
+
+// =========================================
+// BACKEND
+// =========================================
+
+const BACKEND_URL =
+    "https://project-hub-backend-1.onrender.com";
 
 
 // =========================================
@@ -50,56 +59,66 @@ const noteModal =
     document.getElementById("noteModal");
 
 const noteModalOverlay =
-    document.querySelector(".note-modal-overlay");
+    document.querySelector(
+        ".note-modal-overlay"
+    );
 
 const closeNoteModal =
-    document.getElementById("closeNoteModal");
+    document.getElementById(
+        "closeNoteModal"
+    );
 
 const modalNoteTitle =
-    document.getElementById("modalNoteTitle");
+    document.getElementById(
+        "modalNoteTitle"
+    );
 
 const modalNoteText =
-    document.getElementById("modalNoteText");
+    document.getElementById(
+        "modalNoteText"
+    );
 
 const modalNoteDate =
-    document.getElementById("modalNoteDate");
+    document.getElementById(
+        "modalNoteDate"
+    );
 
 const modalNoteCategory =
-    document.getElementById("modalNoteCategory");
+    document.getElementById(
+        "modalNoteCategory"
+    );
 
 
 // =========================================
-// JEGYZETEK BETÖLTÉSE
+// ÖSSZECSUKHATÓ PANELS
 // =========================================
 
-let notes = JSON.parse(
-    localStorage.getItem("projectHubNotes")
-) || [];
+const toggleNoteEditor =
+    document.getElementById(
+        "toggleNoteEditor"
+    );
+
+const toggleNoteFilters =
+    document.getElementById(
+        "toggleNoteFilters"
+    );
+
+const noteEditor =
+    document.getElementById(
+        "noteEditor"
+    );
+
+const noteFilters =
+    document.getElementById(
+        "noteFilters"
+    );
 
 
 // =========================================
-// RÉGI JEGYZETEK FRISSÍTÉSE
+// JEGYZETEK
 // =========================================
 
-notes = notes.map(function (note) {
-
-    return {
-
-        id: note.id || Date.now(),
-
-        title: note.title || "Névtelen jegyzet",
-
-        text: note.text || "",
-
-        date: note.date || "",
-
-        category: note.category || "Egyéb",
-
-        pinned: note.pinned === true
-
-    };
-
-});
+let notes = [];
 
 
 // =========================================
@@ -108,17 +127,380 @@ notes = notes.map(function (note) {
 
 let editingNoteId = null;
 
+let loadingNotes = false;
+
+let savingNote = false;
+
 
 // =========================================
-// JEGYZETEK MENTÉSE LOCAL STORAGE-BA
+// AUTH TOKEN
 // =========================================
 
-function saveNotesToStorage() {
+function getAuthToken() {
 
-    localStorage.setItem(
-        "projectHubNotes",
-        JSON.stringify(notes)
+    return localStorage.getItem(
+        "projectHubAuthToken"
     );
+
+}
+
+
+// =========================================
+// AUTH HEADERS
+// =========================================
+
+function getAuthHeaders() {
+
+    const token =
+        getAuthToken();
+
+
+    const headers = {
+        "Content-Type": "application/json"
+    };
+
+
+    if (token) {
+
+        headers.Authorization =
+            "Bearer " + token;
+
+    }
+
+
+    return headers;
+
+}
+
+
+// =========================================
+// LOGIN OLDAL
+// =========================================
+
+function redirectToLogin(message) {
+
+    localStorage.removeItem(
+        "projectHubAuthToken"
+    );
+
+
+    if (message) {
+
+        sessionStorage.setItem(
+            "projectHubAuthMessage",
+            message
+        );
+
+    }
+
+
+    window.location.href =
+        "../auth/login.html";
+
+}
+
+
+// =========================================
+// API HIBA KEZELÉS
+// =========================================
+
+async function getApiErrorMessage(
+    response
+) {
+
+    try {
+
+        const result =
+            await response.json();
+
+
+        if (
+            result &&
+            result.message
+        ) {
+
+            return result.message;
+
+        }
+
+    }
+    catch (error) {
+
+        console.error(
+            "API hiba válasz feldolgozási hiba:",
+            error
+        );
+
+    }
+
+
+    return "Ismeretlen szerverhiba történt.";
+
+}
+
+
+// =========================================
+// JEGYZETEK BETÖLTÉSE
+// =========================================
+
+async function loadNotes() {
+
+    if (loadingNotes) {
+
+        return;
+
+    }
+
+
+    loadingNotes = true;
+
+
+    try {
+
+        const token =
+            getAuthToken();
+
+
+        if (!token) {
+
+            redirectToLogin(
+                "🔐 A Jegyzetek használatához be kell jelentkezned."
+            );
+
+            return;
+
+        }
+
+
+        const response =
+            await fetch(
+                BACKEND_URL +
+                "/api/notes",
+                {
+                    method: "GET",
+
+                    headers:
+                        getAuthHeaders(),
+
+                    credentials:
+                        "include"
+                }
+            );
+
+
+        if (
+            response.status === 401
+        ) {
+
+            redirectToLogin(
+                "🔐 A munkameneted lejárt. Kérlek jelentkezz be újra."
+            );
+
+            return;
+
+        }
+
+
+        if (!response.ok) {
+
+            const message =
+                await getApiErrorMessage(
+                    response
+                );
+
+            throw new Error(
+                message
+            );
+
+        }
+
+
+        const result =
+            await response.json();
+
+
+        if (
+            !result.success
+        ) {
+
+            throw new Error(
+                result.message ||
+                "Nem sikerült betölteni a jegyzeteket."
+            );
+
+        }
+
+
+        // =====================================
+        // BACKEND FORMÁTUM -> FRONTEND FORMÁTUM
+        // =====================================
+
+        notes =
+            Array.isArray(result.notes)
+                ? result.notes.map(
+                    normalizeNote
+                )
+                : [];
+
+
+        renderNotes();
+
+    }
+    catch (error) {
+
+        console.error(
+            "JEGYZETEK BETÖLTÉSI HIBA:",
+            error
+        );
+
+
+        notesList.innerHTML = "";
+
+
+        emptyNotes.style.display =
+            "none";
+
+
+        noSearchResults.style.display =
+            "block";
+
+
+        noSearchResults.innerHTML = `
+            <div class="empty-icon">
+                ⚠️
+            </div>
+
+            <h3>
+                Nem sikerült betölteni a jegyzeteket
+            </h3>
+
+            <p>
+                ${escapeHtml(
+                    error.message ||
+                    "Szerverhiba történt."
+                )}
+            </p>
+        `;
+
+    }
+    finally {
+
+        loadingNotes = false;
+
+    }
+
+}
+
+
+// =========================================
+// JEGYZET NORMALIZÁLÁSA
+// =========================================
+
+function normalizeNote(note) {
+
+    const id =
+        Number(note.id);
+
+
+    return {
+
+        id:
+            Number.isFinite(id)
+                ? id
+                : note.id,
+
+        title:
+            typeof note.title === "string"
+                ? note.title
+                : "Névtelen jegyzet",
+
+        text:
+            typeof note.content === "string"
+                ? note.content
+                : "",
+
+        category:
+            typeof note.category === "string" &&
+            note.category.trim() !== ""
+                ? note.category
+                : "Egyéb",
+
+        pinned:
+            note.pinned === true,
+
+        date:
+            formatNoteDate(
+                note.updated_at ||
+                note.created_at
+            )
+
+    };
+
+}
+
+
+// =========================================
+// DÁTUM FORMÁZÁSA
+// =========================================
+
+function formatNoteDate(dateValue) {
+
+    if (!dateValue) {
+
+        return "";
+
+    }
+
+
+    const date =
+        new Date(dateValue);
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+
+        return "";
+
+    }
+
+
+    return date.toLocaleString(
+        "hu-HU"
+    );
+
+}
+
+
+// =========================================
+// HTML ESCAPE
+// =========================================
+
+function escapeHtml(value) {
+
+    return String(value)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
 
@@ -145,7 +527,11 @@ function getCategoryIcon(category) {
 
     };
 
-    return icons[category] || "📁";
+
+    return (
+        icons[category] ||
+        "📁"
+    );
 
 }
 
@@ -156,22 +542,42 @@ function getCategoryIcon(category) {
 
 function createPreview(text) {
 
+    const cleanText =
+        String(text || "").trim();
+
+
+    if (!cleanText) {
+
+        return "";
+
+    }
+
+
     const words =
-        text.trim().split(/\s+/);
-
-    const previewWordCount = 10;
+        cleanText.split(/\s+/);
 
 
-    if (words.length <= previewWordCount) {
+    const previewWordCount =
+        10;
 
-        return text;
+
+    if (
+        words.length <=
+        previewWordCount
+    ) {
+
+        return cleanText;
 
     }
 
 
     return words
-        .slice(0, previewWordCount)
-        .join(" ") + "…";
+        .slice(
+            0,
+            previewWordCount
+        )
+        .join(" ") +
+        "…";
 
 }
 
@@ -187,55 +593,64 @@ function getFilteredNotes() {
             .trim()
             .toLowerCase();
 
+
     const selectedCategory =
         categoryFilter.value;
 
 
     let filteredNotes =
-        notes.filter(function (note) {
+        notes.filter(
+            function (note) {
+
+                const title =
+                    String(
+                        note.title || ""
+                    ).toLowerCase();
 
 
-            // ==============================
-            // KERESÉS
-            // ==============================
-
-            const matchesSearch =
-
-                note.title
-                    .toLowerCase()
-                    .includes(searchValue)
-
-                ||
-
-                note.text
-                    .toLowerCase()
-                    .includes(searchValue);
+                const text =
+                    String(
+                        note.text || ""
+                    ).toLowerCase();
 
 
-            if (!matchesSearch) {
+                const matchesSearch =
 
-                return false;
+                    title.includes(
+                        searchValue
+                    )
+
+                    ||
+
+                    text.includes(
+                        searchValue
+                    );
+
+
+                if (!matchesSearch) {
+
+                    return false;
+
+                }
+
+
+                if (
+                    selectedCategory !==
+                        "all" &&
+
+                    note.category !==
+                        selectedCategory
+                ) {
+
+                    return false;
+
+                }
+
+
+                return true;
 
             }
-
-
-            // ==============================
-            // KATEGÓRIA
-            // ==============================
-
-            if (
-                selectedCategory !== "all" &&
-                note.category !== selectedCategory
-            ) {
-
-                return false;
-
-            }
-
-
-            return true;
-
-        });
+        );
 
 
     // =====================================
@@ -246,52 +661,72 @@ function getFilteredNotes() {
         sortNotes.value;
 
 
-    if (sortValue === "az") {
+    if (
+        sortValue === "az"
+    ) {
 
-        filteredNotes.sort(function (a, b) {
+        filteredNotes.sort(
+            function (a, b) {
 
-            return a.title.localeCompare(
-                b.title,
-                "hu"
-            );
+                return a.title.localeCompare(
+                    b.title,
+                    "hu"
+                );
 
-        });
-
-    }
-
-
-    else if (sortValue === "za") {
-
-        filteredNotes.sort(function (a, b) {
-
-            return b.title.localeCompare(
-                a.title,
-                "hu"
-            );
-
-        });
+            }
+        );
 
     }
 
 
-    else if (sortValue === "oldest") {
+    else if (
+        sortValue === "za"
+    ) {
 
-        filteredNotes.sort(function (a, b) {
+        filteredNotes.sort(
+            function (a, b) {
 
-            return Number(a.id) - Number(b.id);
+                return b.title.localeCompare(
+                    a.title,
+                    "hu"
+                );
 
-        });
+            }
+        );
+
+    }
+
+
+    else if (
+        sortValue === "oldest"
+    ) {
+
+        filteredNotes.sort(
+            function (a, b) {
+
+                return (
+                    Number(a.id) -
+                    Number(b.id)
+                );
+
+            }
+        );
 
     }
 
 
     else {
 
-        filteredNotes.sort(function (a, b) {
+        filteredNotes.sort(
+            function (a, b) {
 
-            return Number(b.id) - Number(a.id);
+                return (
+                    Number(b.id) -
+                    Number(a.id)
+                );
 
-        });
+            }
+        );
 
     }
 
@@ -300,23 +735,33 @@ function getFilteredNotes() {
     // RÖGZÍTETT JEGYZETEK ELŐRE
     // =====================================
 
-    filteredNotes.sort(function (a, b) {
+    filteredNotes.sort(
+        function (a, b) {
 
-        if (a.pinned && !b.pinned) {
+            if (
+                a.pinned &&
+                !b.pinned
+            ) {
 
-            return -1;
+                return -1;
+
+            }
+
+
+            if (
+                !a.pinned &&
+                b.pinned
+            ) {
+
+                return 1;
+
+            }
+
+
+            return 0;
 
         }
-
-        if (!a.pinned && b.pinned) {
-
-            return 1;
-
-        }
-
-        return 0;
-
-    });
+    );
 
 
     return filteredNotes;
@@ -363,379 +808,503 @@ function renderNotes() {
     // TELJESEN ÜRES
     // =====================================
 
-    if (notes.length === 0) {
+    if (
+        notes.length === 0
+    ) {
 
-        emptyNotes.style.display = "block";
+        emptyNotes.style.display =
+            "block";
 
-        noSearchResults.style.display = "none";
+        noSearchResults.style.display =
+            "none";
 
         return;
 
     }
 
 
-    emptyNotes.style.display = "none";
+    emptyNotes.style.display =
+        "none";
 
 
     // =====================================
     // NINCS TALÁLAT
     // =====================================
 
-    if (filteredNotes.length === 0) {
+    if (
+        filteredNotes.length === 0
+    ) {
 
-        noSearchResults.style.display = "block";
+        noSearchResults.style.display =
+            "block";
 
         return;
 
     }
 
 
-    noSearchResults.style.display = "none";
+    noSearchResults.style.display =
+        "none";
 
 
     // =====================================
     // KÁRTYÁK
     // =====================================
 
-    filteredNotes.forEach(function (note) {
+    filteredNotes.forEach(
+        function (note) {
 
 
-        // =================================
-        // KÁRTYA
-        // =================================
+            // =================================
+            // KÁRTYA
+            // =================================
 
-        const noteCard =
-            document.createElement("article");
-
-        noteCard.className =
-            "note-card";
-
-
-        if (note.pinned) {
-
-            noteCard.classList.add(
-                "pinned-note"
-            );
-
-        }
+            const noteCard =
+                document.createElement(
+                    "article"
+                );
 
 
-        // =================================
-        // FEJLÉC
-        // =================================
-
-        const noteHeader =
-            document.createElement("div");
-
-        noteHeader.className =
-            "note-card-header";
+            noteCard.className =
+                "note-card";
 
 
-        // =================================
-        // CÍM RÉSZ
-        // =================================
+            if (note.pinned) {
 
-        const titleArea =
-            document.createElement("div");
+                noteCard.classList.add(
+                    "pinned-note"
+                );
 
-        titleArea.className =
-            "note-title-area";
+            }
 
 
-        // =================================
-        // RÖGZÍTÉS IKON
-        // =================================
+            // =================================
+            // FEJLÉC
+            // =================================
 
-        if (note.pinned) {
+            const noteHeader =
+                document.createElement(
+                    "div"
+                );
 
-            const pinIcon =
-                document.createElement("span");
 
-            pinIcon.className =
-                "pin-indicator";
+            noteHeader.className =
+                "note-card-header";
 
-            pinIcon.textContent =
-                "📌";
 
-            pinIcon.title =
-                "Rögzített jegyzet";
+            // =================================
+            // CÍM RÉSZ
+            // =================================
+
+            const titleArea =
+                document.createElement(
+                    "div"
+                );
+
+
+            titleArea.className =
+                "note-title-area";
+
+
+            // =================================
+            // RÖGZÍTÉS IKON
+            // =================================
+
+            if (note.pinned) {
+
+                const pinIcon =
+                    document.createElement(
+                        "span"
+                    );
+
+
+                pinIcon.className =
+                    "pin-indicator";
+
+
+                pinIcon.textContent =
+                    "📌";
+
+
+                pinIcon.title =
+                    "Rögzített jegyzet";
+
+
+                titleArea.appendChild(
+                    pinIcon
+                );
+
+            }
+
+
+            // =================================
+            // CÍM
+            // =================================
+
+            const title =
+                document.createElement(
+                    "h3"
+                );
+
+
+            title.textContent =
+                note.title;
+
 
             titleArea.appendChild(
-                pinIcon
+                title
+            );
+
+
+            // =================================
+            // GOMBOK
+            // =================================
+
+            const buttons =
+                document.createElement(
+                    "div"
+                );
+
+
+            buttons.className =
+                "note-buttons";
+
+
+            // =================================
+            // RÖGZÍTÉS
+            // =================================
+
+            const pinButton =
+                document.createElement(
+                    "button"
+                );
+
+
+            pinButton.className =
+                "pin-note";
+
+
+            pinButton.type =
+                "button";
+
+
+            pinButton.textContent =
+                note.pinned
+                    ? "📌"
+                    : "📍";
+
+
+            pinButton.title =
+                note.pinned
+                    ? "Levétel a rögzítésből"
+                    : "Jegyzet rögzítése";
+
+
+            pinButton.addEventListener(
+                "click",
+                function (event) {
+
+                    event.stopPropagation();
+
+                    togglePinNote(
+                        note.id
+                    );
+
+                }
+            );
+
+
+            // =================================
+            // SZERKESZTÉS
+            // =================================
+
+            const editButton =
+                document.createElement(
+                    "button"
+                );
+
+
+            editButton.className =
+                "edit-note";
+
+
+            editButton.textContent =
+                "✏️";
+
+
+            editButton.type =
+                "button";
+
+
+            editButton.title =
+                "Jegyzet szerkesztése";
+
+
+            editButton.addEventListener(
+                "click",
+                function (event) {
+
+                    event.stopPropagation();
+
+                    editNote(
+                        note.id
+                    );
+
+                }
+            );
+
+
+            // =================================
+            // TÖRLÉS
+            // =================================
+
+            const deleteButton =
+                document.createElement(
+                    "button"
+                );
+
+
+            deleteButton.className =
+                "delete-note";
+
+
+            deleteButton.textContent =
+                "🗑️";
+
+
+            deleteButton.type =
+                "button";
+
+
+            deleteButton.title =
+                "Jegyzet törlése";
+
+
+            deleteButton.addEventListener(
+                "click",
+                function (event) {
+
+                    event.stopPropagation();
+
+                    deleteNote(
+                        note.id
+                    );
+
+                }
+            );
+
+
+            // =================================
+            // GOMBOK
+            // =================================
+
+            buttons.appendChild(
+                pinButton
+            );
+
+            buttons.appendChild(
+                editButton
+            );
+
+            buttons.appendChild(
+                deleteButton
+            );
+
+
+            // =================================
+            // FEJLÉC
+            // =================================
+
+            noteHeader.appendChild(
+                titleArea
+            );
+
+            noteHeader.appendChild(
+                buttons
+            );
+
+
+            // =================================
+            // KATEGÓRIA
+            // =================================
+
+            const category =
+                document.createElement(
+                    "span"
+                );
+
+
+            category.className =
+                "note-category";
+
+
+            category.textContent =
+                `${getCategoryIcon(
+                    note.category
+                )} ${note.category}`;
+
+
+            // =================================
+            // SZÖVEG
+            // =================================
+
+            const text =
+                document.createElement(
+                    "p"
+                );
+
+
+            text.className =
+                "note-card-text";
+
+
+            text.textContent =
+                createPreview(
+                    note.text
+                );
+
+
+            // =================================
+            // DÁTUM
+            // =================================
+
+            const date =
+                document.createElement(
+                    "small"
+                );
+
+
+            date.className =
+                "note-date";
+
+
+            date.textContent =
+                note.date;
+
+
+            // =================================
+            // KÁRTYA ÖSSZEÁLLÍTÁSA
+            // =================================
+
+            noteCard.appendChild(
+                noteHeader
+            );
+
+            noteCard.appendChild(
+                category
+            );
+
+            noteCard.appendChild(
+                text
+            );
+
+            noteCard.appendChild(
+                date
+            );
+
+
+            // =================================
+            // KATTINTÁS
+            // =================================
+
+            noteCard.addEventListener(
+                "click",
+                function () {
+
+                    openNoteModal(
+                        note.id
+                    );
+
+                }
+            );
+
+
+            notesList.appendChild(
+                noteCard
             );
 
         }
-
-
-        // =================================
-        // CÍM
-        // =================================
-
-        const title =
-            document.createElement("h3");
-
-        title.textContent =
-            note.title;
-
-
-        titleArea.appendChild(title);
-
-
-        // =================================
-        // GOMBOK
-        // =================================
-
-        const buttons =
-            document.createElement("div");
-
-        buttons.className =
-            "note-buttons";
-
-
-        // =================================
-        // RÖGZÍTÉS
-        // =================================
-
-        const pinButton =
-            document.createElement("button");
-
-        pinButton.className =
-            "pin-note";
-
-        pinButton.type =
-            "button";
-
-        pinButton.textContent =
-            note.pinned ? "📌" : "📍";
-
-        pinButton.title =
-            note.pinned
-                ? "Levétel a rögzítésből"
-                : "Jegyzet rögzítése";
-
-
-        pinButton.addEventListener(
-            "click",
-            function (event) {
-
-                event.stopPropagation();
-
-                togglePinNote(note.id);
-
-            }
-        );
-
-
-        // =================================
-        // SZERKESZTÉS
-        // =================================
-
-        const editButton =
-            document.createElement("button");
-
-        editButton.className =
-            "edit-note";
-
-        editButton.textContent =
-            "✏️";
-
-        editButton.type =
-            "button";
-
-        editButton.title =
-            "Jegyzet szerkesztése";
-
-
-        editButton.addEventListener(
-            "click",
-            function (event) {
-
-                event.stopPropagation();
-
-                editNote(note.id);
-
-            }
-        );
-
-
-        // =================================
-        // TÖRLÉS
-        // =================================
-
-        const deleteButton =
-            document.createElement("button");
-
-        deleteButton.className =
-            "delete-note";
-
-        deleteButton.textContent =
-            "🗑️";
-
-        deleteButton.type =
-            "button";
-
-        deleteButton.title =
-            "Jegyzet törlése";
-
-
-        deleteButton.addEventListener(
-            "click",
-            function (event) {
-
-                event.stopPropagation();
-
-                deleteNote(note.id);
-
-            }
-        );
-
-
-        // =================================
-        // GOMBOK
-        // =================================
-
-        buttons.appendChild(
-            pinButton
-        );
-
-        buttons.appendChild(
-            editButton
-        );
-
-        buttons.appendChild(
-            deleteButton
-        );
-
-
-        // =================================
-        // FEJLÉC
-        // =================================
-
-        noteHeader.appendChild(
-            titleArea
-        );
-
-        noteHeader.appendChild(
-            buttons
-        );
-
-
-        // =================================
-        // KATEGÓRIA
-        // =================================
-
-        const category =
-            document.createElement("span");
-
-        category.className =
-            "note-category";
-
-        category.textContent =
-            `${getCategoryIcon(note.category)} ${note.category}`;
-
-
-        // =================================
-        // SZÖVEG
-        // =================================
-
-        const text =
-            document.createElement("p");
-
-        text.className =
-            "note-card-text";
-
-        text.textContent =
-            createPreview(note.text);
-
-
-        // =================================
-        // DÁTUM
-        // =================================
-
-        const date =
-            document.createElement("small");
-
-        date.className =
-            "note-date";
-
-        date.textContent =
-            note.date;
-
-
-        // =================================
-        // KÁRTYA ÖSSZEÁLLÍTÁSA
-        // =================================
-
-        noteCard.appendChild(
-            noteHeader
-        );
-
-        noteCard.appendChild(
-            category
-        );
-
-        noteCard.appendChild(
-            text
-        );
-
-        noteCard.appendChild(
-            date
-        );
-
-
-        // =================================
-        // KATTINTÁS
-        // =================================
-
-        noteCard.addEventListener(
-            "click",
-            function () {
-
-                openNoteModal(note.id);
-
-            }
-        );
-
-
-        notesList.appendChild(
-            noteCard
-        );
-
-    });
+    );
 
 }
 
 
 // =========================================
-// ÚJ JEGYZET / SZERKESZTÉS MENTÉSE
+// ÚJ JEGYZET LÉTREHOZÁSA
 // =========================================
 
-saveNoteButton.addEventListener(
-    "click",
-    function () {
+async function createNote() {
+
+    const title =
+        noteTitle.value.trim();
+
+    const text =
+        noteText.value.trim();
+
+    const category =
+        noteCategory.value;
 
 
-        const title =
-            noteTitle.value.trim();
+    // =====================================
+    // ELLENŐRZÉS
+    // =====================================
 
-        const text =
-            noteText.value.trim();
+    if (
+        title === "" ||
+        text === ""
+    ) {
 
-        const category =
-            noteCategory.value;
+        alert(
+            "Kérlek töltsd ki a címet és a jegyzet szövegét!"
+        );
+
+        return;
+
+    }
 
 
-        // ==============================
-        // ELLENŐRZÉS
-        // ==============================
+    try {
+
+        const response =
+            await fetch(
+                BACKEND_URL +
+                "/api/notes",
+                {
+                    method: "POST",
+
+                    headers:
+                        getAuthHeaders(),
+
+                    credentials:
+                        "include",
+
+                    body:
+                        JSON.stringify({
+
+                            title:
+                                title,
+
+                            content:
+                                text,
+
+                            category:
+                                category,
+
+                            pinned:
+                                false
+
+                        })
+
+                }
+            );
+
 
         if (
-            title === "" ||
-            text === ""
+            response.status === 401
         ) {
 
-            alert(
-                "Kérlek töltsd ki a címet és a jegyzet szövegét!"
+            redirectToLogin(
+                "🔐 A munkameneted lejárt. Kérlek jelentkezz be újra."
             );
 
             return;
@@ -743,44 +1312,245 @@ saveNoteButton.addEventListener(
         }
 
 
-        // ==============================
-        // SZERKESZTÉS
-        // ==============================
+        if (!response.ok) {
+
+            const message =
+                await getApiErrorMessage(
+                    response
+                );
+
+            throw new Error(
+                message
+            );
+
+        }
+
+
+        const result =
+            await response.json();
+
 
         if (
-            editingNoteId !== null
+            !result.success ||
+            !result.note
         ) {
 
+            throw new Error(
+                result.message ||
+                "Nem sikerült létrehozni a jegyzetet."
+            );
 
-            notes = notes.map(
-                function (note) {
+        }
 
 
-                    if (
-                        note.id ===
-                        editingNoteId
-                    ) {
+        notes.unshift(
+            normalizeNote(
+                result.note
+            )
+        );
 
-                        return {
 
-                            id: note.id,
+        // =====================================
+        // MEZŐK ÜRÍTÉSE
+        // =====================================
 
-                            title: title,
+        noteTitle.value =
+            "";
 
-                            text: text,
+        noteText.value =
+            "";
 
-                            category: category,
+        noteCategory.value =
+            "Egyéb";
+
+
+        // =====================================
+        // PANEL BEZÁRÁSA
+        // =====================================
+
+        noteEditor.classList.remove(
+            "open"
+        );
+
+
+        toggleNoteEditor.textContent =
+            "➕ Új jegyzet";
+
+
+        renderNotes();
+
+    }
+    catch (error) {
+
+        console.error(
+            "NOTE CREATE HIBA:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Nem sikerült létrehozni a jegyzetet."
+        );
+
+    }
+
+}
+
+
+// =========================================
+// JEGYZET SZERKESZTÉSE
+// =========================================
+
+async function updateNote(
+    noteId
+) {
+
+    const title =
+        noteTitle.value.trim();
+
+    const text =
+        noteText.value.trim();
+
+    const category =
+        noteCategory.value;
+
+
+    // =====================================
+    // ELLENŐRZÉS
+    // =====================================
+
+    if (
+        title === "" ||
+        text === ""
+    ) {
+
+        alert(
+            "Kérlek töltsd ki a címet és a jegyzet szövegét!"
+        );
+
+        return;
+
+    }
+
+
+    const currentNote =
+        notes.find(
+            function (note) {
+
+                return (
+                    note.id === noteId
+                );
+
+            }
+        );
+
+
+    if (!currentNote) {
+
+        alert(
+            "A jegyzet nem található."
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                BACKEND_URL +
+                "/api/notes/" +
+                encodeURIComponent(
+                    noteId
+                ),
+                {
+                    method: "PUT",
+
+                    headers:
+                        getAuthHeaders(),
+
+                    credentials:
+                        "include",
+
+                    body:
+                        JSON.stringify({
+
+                            title:
+                                title,
+
+                            content:
+                                text,
+
+                            category:
+                                category,
 
                             pinned:
-                                note.pinned === true,
+                                currentNote.pinned === true
 
-                            date:
-                                new Date()
-                                    .toLocaleString(
-                                        "hu-HU"
-                                    )
+                        })
 
-                        };
+                }
+            );
+
+
+        if (
+            response.status === 401
+        ) {
+
+            redirectToLogin(
+                "🔐 A munkameneted lejárt. Kérlek jelentkezz be újra."
+            );
+
+            return;
+
+        }
+
+
+        if (!response.ok) {
+
+            const message =
+                await getApiErrorMessage(
+                    response
+                );
+
+            throw new Error(
+                message
+            );
+
+        }
+
+
+        const result =
+            await response.json();
+
+
+        if (
+            !result.success ||
+            !result.note
+        ) {
+
+            throw new Error(
+                result.message ||
+                "Nem sikerült módosítani a jegyzetet."
+            );
+
+        }
+
+
+        notes =
+            notes.map(
+                function (note) {
+
+                    if (
+                        note.id === noteId
+                    ) {
+
+                        return normalizeNote(
+                            result.note
+                        );
 
                     }
 
@@ -791,86 +1561,96 @@ saveNoteButton.addEventListener(
             );
 
 
-            editingNoteId = null;
+        editingNoteId =
+            null;
 
 
-            saveNoteButton.textContent =
-                "💾 Jegyzet mentése";
+        saveNoteButton.textContent =
+            "💾 Jegyzet mentése";
+
+
+        noteTitle.value =
+            "";
+
+        noteText.value =
+            "";
+
+        noteCategory.value =
+            "Egyéb";
+
+
+        noteEditor.classList.remove(
+            "open"
+        );
+
+
+        toggleNoteEditor.textContent =
+            "➕ Új jegyzet";
+
+
+        renderNotes();
+
+    }
+    catch (error) {
+
+        console.error(
+            "NOTE UPDATE HIBA:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Nem sikerült módosítani a jegyzetet."
+        );
+
+    }
+
+}
+
+
+// =========================================
+// MENTÉS GOMB
+// =========================================
+
+saveNoteButton.addEventListener(
+    "click",
+    async function () {
+
+        if (savingNote) {
+
+            return;
 
         }
 
 
-        // ==============================
-        // ÚJ JEGYZET
-        // ==============================
-
-        else {
+        savingNote = true;
 
 
-            const newNote = {
+        try {
 
-                id: Date.now(),
+            if (
+                editingNoteId !== null
+            ) {
 
-                title: title,
+                await updateNote(
+                    editingNoteId
+                );
 
-                text: text,
+            }
 
-                category: category,
+            else {
 
-                pinned: false,
+                await createNote();
 
-                date:
-                    new Date()
-                        .toLocaleString(
-                            "hu-HU"
-                        )
-
-            };
-
-
-            notes.unshift(
-                newNote
-            );
+            }
 
         }
+        finally {
 
+            savingNote = false;
 
-        // ==============================
-        // MENTÉS
-        // ==============================
-
-        saveNotesToStorage();
-
-
-        // ==============================
-        // MEZŐK ÜRÍTÉSE
-        // ==============================
-
-        noteTitle.value = "";
-
-noteText.value = "";
-
-noteCategory.value =
-    "Egyéb";
-
-
-// ==============================
-// HOZZÁADÓ PANEL BEZÁRÁSA
-// ==============================
-
-noteEditor.classList.remove(
-    "open"
-);
-
-toggleNoteEditor.textContent =
-    "➕ Új jegyzet";
-
-
-// ==============================
-// LISTA FRISSÍTÉSE
-// ==============================
-
-renderNotes();
+        }
 
     }
 );
@@ -882,12 +1662,13 @@ renderNotes();
 
 function editNote(id) {
 
-
     const note =
         notes.find(
             function (item) {
 
-                return item.id === id;
+                return (
+                    item.id === id
+                );
 
             }
         );
@@ -903,8 +1684,10 @@ function editNote(id) {
     noteTitle.value =
         note.title;
 
+
     noteText.value =
         note.text;
+
 
     noteCategory.value =
         note.category;
@@ -916,6 +1699,23 @@ function editNote(id) {
 
     saveNoteButton.textContent =
         "💾 Módosítás mentése";
+
+
+    if (noteEditor) {
+
+        noteEditor.classList.add(
+            "open"
+        );
+
+    }
+
+
+    if (toggleNoteEditor) {
+
+        toggleNoteEditor.textContent =
+            "➖ Új jegyzet";
+
+    }
 
 
     window.scrollTo({
@@ -933,36 +1733,148 @@ function editNote(id) {
 // JEGYZET RÖGZÍTÉSE
 // =========================================
 
-function togglePinNote(id) {
+async function togglePinNote(id) {
 
+    const note =
+        notes.find(
+            function (item) {
 
-    notes = notes.map(
-        function (note) {
-
-
-            if (note.id === id) {
-
-                return {
-
-                    ...note,
-
-                    pinned:
-                        !note.pinned
-
-                };
+                return (
+                    item.id === id
+                );
 
             }
+        );
 
 
-            return note;
+    if (!note) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                BACKEND_URL +
+                "/api/notes/" +
+                encodeURIComponent(
+                    id
+                ),
+                {
+                    method: "PUT",
+
+                    headers:
+                        getAuthHeaders(),
+
+                    credentials:
+                        "include",
+
+                    body:
+                        JSON.stringify({
+
+                            title:
+                                note.title,
+
+                            content:
+                                note.text,
+
+                            category:
+                                note.category,
+
+                            pinned:
+                                !note.pinned
+
+                        })
+
+                }
+            );
+
+
+        if (
+            response.status === 401
+        ) {
+
+            redirectToLogin(
+                "🔐 A munkameneted lejárt. Kérlek jelentkezz be újra."
+            );
+
+            return;
 
         }
-    );
 
 
-    saveNotesToStorage();
+        if (!response.ok) {
 
-    renderNotes();
+            const message =
+                await getApiErrorMessage(
+                    response
+                );
+
+            throw new Error(
+                message
+            );
+
+        }
+
+
+        const result =
+            await response.json();
+
+
+        if (
+            !result.success ||
+            !result.note
+        ) {
+
+            throw new Error(
+                result.message ||
+                "Nem sikerült módosítani a jegyzetet."
+            );
+
+        }
+
+
+        notes =
+            notes.map(
+                function (item) {
+
+                    if (
+                        item.id === id
+                    ) {
+
+                        return normalizeNote(
+                            result.note
+                        );
+
+                    }
+
+
+                    return item;
+
+                }
+            );
+
+
+        renderNotes();
+
+    }
+    catch (error) {
+
+        console.error(
+            "NOTE PIN HIBA:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Nem sikerült módosítani a jegyzetet."
+        );
+
+    }
 
 }
 
@@ -971,8 +1883,7 @@ function togglePinNote(id) {
 // JEGYZET TÖRLÉSE
 // =========================================
 
-function deleteNote(id) {
-
+async function deleteNote(id) {
 
     const confirmed =
         confirm(
@@ -987,18 +1898,121 @@ function deleteNote(id) {
     }
 
 
-    notes = notes.filter(
-        function (note) {
+    try {
 
-            return note.id !== id;
+        const response =
+            await fetch(
+                BACKEND_URL +
+                "/api/notes/" +
+                encodeURIComponent(
+                    id
+                ),
+                {
+                    method: "DELETE",
+
+                    headers:
+                        getAuthHeaders(),
+
+                    credentials:
+                        "include"
+                }
+            );
+
+
+        if (
+            response.status === 401
+        ) {
+
+            redirectToLogin(
+                "🔐 A munkameneted lejárt. Kérlek jelentkezz be újra."
+            );
+
+            return;
 
         }
-    );
 
 
-    saveNotesToStorage();
+        if (!response.ok) {
 
-    renderNotes();
+            const message =
+                await getApiErrorMessage(
+                    response
+                );
+
+            throw new Error(
+                message
+            );
+
+        }
+
+
+        const result =
+            await response.json();
+
+
+        if (
+            !result.success
+        ) {
+
+            throw new Error(
+                result.message ||
+                "Nem sikerült törölni a jegyzetet."
+            );
+
+        }
+
+
+        notes =
+            notes.filter(
+                function (note) {
+
+                    return (
+                        note.id !== id
+                    );
+
+                }
+            );
+
+
+        if (
+            editingNoteId === id
+        ) {
+
+            editingNoteId =
+                null;
+
+            noteTitle.value =
+                "";
+
+            noteText.value =
+                "";
+
+            noteCategory.value =
+                "Egyéb";
+
+            saveNoteButton.textContent =
+                "💾 Jegyzet mentése";
+
+        }
+
+
+        renderNotes();
+
+    }
+    catch (error) {
+
+        console.error(
+            "NOTE DELETE HIBA:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Nem sikerült törölni a jegyzetet."
+        );
+
+    }
 
 }
 
@@ -1009,12 +2023,13 @@ function deleteNote(id) {
 
 function openNoteModal(id) {
 
-
     const note =
         notes.find(
             function (item) {
 
-                return item.id === id;
+                return (
+                    item.id === id
+                );
 
             }
         );
@@ -1040,7 +2055,9 @@ function openNoteModal(id) {
 
 
     modalNoteCategory.textContent =
-        `${getCategoryIcon(note.category)} ${note.category}`;
+        `${getCategoryIcon(
+            note.category
+        )} ${note.category}`;
 
 
     noteModal.classList.add(
@@ -1060,7 +2077,6 @@ function openNoteModal(id) {
 // =========================================
 
 function closeModal() {
-
 
     noteModal.classList.remove(
         "open"
@@ -1101,7 +2117,6 @@ noteModalOverlay.addEventListener(
 document.addEventListener(
     "keydown",
     function (event) {
-
 
         if (
             event.key === "Escape" &&
@@ -1161,16 +2176,19 @@ sortNotes.addEventListener(
 
 
 // =========================================
-// ENTER A KERESŐBEN
+// ESC A KERESŐBEN
 // =========================================
 
 noteSearch.addEventListener(
     "keydown",
     function (event) {
 
-        if (event.key === "Escape") {
+        if (
+            event.key === "Escape"
+        ) {
 
-            noteSearch.value = "";
+            noteSearch.value =
+                "";
 
             renderNotes();
 
@@ -1180,39 +2198,6 @@ noteSearch.addEventListener(
 
     }
 );
-
-
-// =========================================
-// INDULÁS
-// =========================================
-
-saveNotesToStorage();
-
-renderNotes();
-
-// =========================================
-// ÖSSZECSUKHATÓ JEGYZET PANEL
-// =========================================
-
-const toggleNoteEditor =
-    document.getElementById(
-        "toggleNoteEditor"
-    );
-
-const toggleNoteFilters =
-    document.getElementById(
-        "toggleNoteFilters"
-    );
-
-const noteEditor =
-    document.getElementById(
-        "noteEditor"
-    );
-
-const noteFilters =
-    document.getElementById(
-        "noteFilters"
-    );
 
 
 // =========================================
@@ -1291,3 +2276,17 @@ toggleNoteFilters.addEventListener(
 
     }
 );
+
+
+// =========================================
+// INDULÁS
+// =========================================
+//
+// FONTOS:
+// NINCS localStorage JEGYZETTÁROLÁS.
+// A jegyzeteket mindig a backend,
+// az aktuálisan bejelentkezett user
+// alapján tölti be.
+// =========================================
+
+loadNotes();
