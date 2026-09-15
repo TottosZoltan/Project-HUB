@@ -12,8 +12,8 @@
 
     <title>Jegyzetek - Project Hub</title>
 
-    <link rel="stylesheet" href="../style.css">
-    <link rel="stylesheet" href="pages.css">
+    <link rel="stylesheet" href="../../style.css">
+    <link rel="stylesheet" href="../pages.css">
     <link rel="stylesheet" href="notes.css">
 
 </head>
@@ -38,7 +38,7 @@
 
 
         <a
-            href="../"
+            href="../../index.html"
             class="back-button"
         >
 
@@ -80,43 +80,39 @@
 
 
         <!-- =====================================
+             MODUL GOMBOK
+        ===================================== -->
+
+        <div class="module-actions">
+
+            <button
+                id="toggleNoteEditor"
+                class="module-toggle-button"
+                type="button"
+            >
+                ➕ Új jegyzet
+            </button>
+
+            <button
+                id="toggleNoteFilters"
+                class="module-toggle-button"
+                type="button"
+            >
+                🔎 Keresés és szűrés
+            </button>
+
+        </div>
+
+
+
+        <!-- =====================================
              ÚJ JEGYZET
         ===================================== -->
 
-        <!-- =====================================
-     MODUL GOMBOK
-===================================== -->
-
-<div class="module-actions">
-
-    <button
-        id="toggleNoteEditor"
-        class="module-toggle-button"
-        type="button"
-    >
-        ➕ Új jegyzet
-    </button>
-
-    <button
-        id="toggleNoteFilters"
-        class="module-toggle-button"
-        type="button"
-    >
-        🔎 Keresés és szűrés
-    </button>
-
-</div>
-
-
-<!-- =====================================
-     ÚJ JEGYZET
-===================================== -->
-
-<section
-    class="notes-editor collapsible-panel"
-    id="noteEditor"
->
-
+        <section
+            class="notes-editor collapsible-panel"
+            id="noteEditor"
+        >
 
             <!-- CÍM -->
 
@@ -188,11 +184,10 @@
              KERESÉS + SZŰRÉS
         ===================================== -->
 
-<section
-    class="notes-tools collapsible-panel"
-    id="noteFilters"
->
-
+        <section
+            class="notes-tools collapsible-panel"
+            id="noteFilters"
+        >
 
             <!-- KERESÉS -->
 
@@ -215,7 +210,6 @@
             <!-- SZŰRŐK -->
 
             <div class="notes-filters">
-
 
                 <select id="categoryFilter">
 
@@ -368,11 +362,9 @@
         class="note-modal"
     >
 
-
         <!-- HÁTTÉR -->
 
         <div class="note-modal-overlay"></div>
-
 
 
         <!-- KÁRTYA -->
@@ -382,7 +374,6 @@
             role="dialog"
             aria-modal="true"
         >
-
 
             <!-- FEJLÉC -->
 
@@ -443,7 +434,7 @@
 
     <!-- JAVASCRIPT -->
 
-    <script src="../script.js"></script>
+    <script src="../../script.js"></script>
     <script src="notes.js"></script>
 
 
