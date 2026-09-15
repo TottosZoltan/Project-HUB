@@ -1,50 +1,485 @@
 <!DOCTYPE html>
 <html lang="hu">
-<main class="page-content tasks-page">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Feladatok - Project Hub</title>
 
     <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="pages.css">
+    <link rel="stylesheet" href="tasks.css">
+
 </head>
 
+
 <body>
+
+
+    <!-- =========================================
+         FEJLÉC
+    ========================================= -->
 
     <header class="header">
 
         <div>
+
             <h1>FELADATOK</h1>
+
             <p>Project Hub</p>
+
         </div>
 
-        <a href="../" class="back-button">
-    <span class="back-arrow"></span>
-</a>
+
+        <a
+            href="../"
+            class="back-button"
+            aria-label="Vissza"
+        >
+
+            <span class="back-arrow"></span>
+
+        </a>
 
     </header>
 
 
-    <main>
 
-        <section class="welcome">
+    <!-- =========================================
+         FŐ TARTALOM
+    ========================================= -->
+
+    <main class="page-content tasks-page">
+
+
+        <!-- =====================================
+             BEVEZETŐ
+        ===================================== -->
+
+        <section class="page-intro">
 
             <p class="small-title">
                 PROJECT HUB
             </p>
 
             <h2>
-                ✅ Feladatok
+                ✅ Feladataim
             </h2>
 
             <p>
-                Ide kerülnek majd a feladataid.
+                Tartsd rendben a teendőidet és kövesd a haladásodat.
             </p>
 
         </section>
 
+
+
+        <!-- =====================================
+             ÚJ FELADAT
+        ===================================== -->
+
+        <section class="task-editor">
+
+
+            <!-- FELADAT NEVE -->
+
+            <input
+                type="text"
+                id="taskTitle"
+                placeholder="Feladat neve..."
+                maxlength="120"
+            >
+
+
+            <!-- LEÍRÁS -->
+
+            <textarea
+                id="taskDescription"
+                placeholder="Leírás (opcionális)..."
+                rows="4"
+            ></textarea>
+
+
+            <!-- BEÁLLÍTÁSOK -->
+
+            <div class="task-editor-options">
+
+
+                <div class="task-option">
+
+                    <label for="taskPriority">
+                        Prioritás
+                    </label>
+
+                    <select id="taskPriority">
+
+                        <option value="low">
+                            🟢 Alacsony
+                        </option>
+
+                        <option value="normal" selected>
+                            🟡 Normál
+                        </option>
+
+                        <option value="high">
+                            🔴 Magas
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="task-option">
+
+                    <label for="taskCategory">
+                        Kategória
+                    </label>
+
+                    <select id="taskCategory">
+
+                        <option value="Egyéb">
+                            📁 Egyéb
+                        </option>
+
+                        <option value="Munka">
+                            💼 Munka
+                        </option>
+
+                        <option value="Személyes">
+                            👤 Személyes
+                        </option>
+
+                        <option value="Projekt">
+                            🚀 Projekt
+                        </option>
+
+                        <option value="Fontos">
+                            ⭐ Fontos
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+            <!-- MENTÉS -->
+
+            <button
+                id="saveTask"
+                class="save-task-button"
+                type="button"
+            >
+
+                ➕ Feladat hozzáadása
+
+            </button>
+
+        </section>
+
+
+
+        <!-- =====================================
+             STATISZTIKA
+        ===================================== -->
+
+        <section class="task-stats">
+
+
+            <div class="task-stat">
+
+                <span class="task-stat-number" id="totalTasks">
+                    0
+                </span>
+
+                <span class="task-stat-label">
+                    Összes
+                </span>
+
+            </div>
+
+
+            <div class="task-stat">
+
+                <span class="task-stat-number" id="activeTasks">
+                    0
+                </span>
+
+                <span class="task-stat-label">
+                    Aktív
+                </span>
+
+            </div>
+
+
+            <div class="task-stat">
+
+                <span class="task-stat-number" id="completedTasks">
+                    0
+                </span>
+
+                <span class="task-stat-label">
+                    Kész
+                </span>
+
+            </div>
+
+
+            <div class="task-stat">
+
+                <span class="task-stat-number" id="progressPercent">
+                    0%
+                </span>
+
+                <span class="task-stat-label">
+                    Haladás
+                </span>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================
+             HALADÁSI SÁV
+        ===================================== -->
+
+        <section class="task-progress">
+
+            <div class="task-progress-header">
+
+                <span>
+                    Teljes haladás
+                </span>
+
+                <span id="progressText">
+                    0 / 0
+                </span>
+
+            </div>
+
+
+            <div class="progress-bar">
+
+                <div
+                    id="progressBar"
+                    class="progress-bar-fill"
+                ></div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================
+             KERESÉS + SZŰRÉS
+        ===================================== -->
+
+        <section class="tasks-tools">
+
+
+            <!-- KERESÉS -->
+
+            <div class="tasks-search">
+
+                <span class="search-icon">
+                    🔍
+                </span>
+
+                <input
+                    type="search"
+                    id="taskSearch"
+                    placeholder="Keresés a feladatok között..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+            <!-- SZŰRŐK -->
+
+            <div class="tasks-filters">
+
+
+                <select id="taskStatusFilter">
+
+                    <option value="all">
+                        📋 Minden feladat
+                    </option>
+
+                    <option value="active">
+                        🔵 Aktív
+                    </option>
+
+                    <option value="completed">
+                        ✅ Kész
+                    </option>
+
+                </select>
+
+
+                <select id="taskCategoryFilter">
+
+                    <option value="all">
+                        📁 Minden kategória
+                    </option>
+
+                    <option value="Munka">
+                        💼 Munka
+                    </option>
+
+                    <option value="Személyes">
+                        👤 Személyes
+                    </option>
+
+                    <option value="Projekt">
+                        🚀 Projekt
+                    </option>
+
+                    <option value="Fontos">
+                        ⭐ Fontos
+                    </option>
+
+                    <option value="Egyéb">
+                        📁 Egyéb
+                    </option>
+
+                </select>
+
+
+                <select id="taskSort">
+
+                    <option value="default">
+                        🕐 Alapértelmezett
+                    </option>
+
+                    <option value="newest">
+                        🆕 Legújabb
+                    </option>
+
+                    <option value="oldest">
+                        🕐 Legrégebbi
+                    </option>
+
+                    <option value="priority">
+                        🔥 Prioritás
+                    </option>
+
+                    <option value="az">
+                        🔤 A → Z
+                    </option>
+
+                    <option value="za">
+                        🔤 Z → A
+                    </option>
+
+                </select>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================
+             FELADATOK
+        ===================================== -->
+
+        <section class="tasks-section">
+
+
+            <!-- FEJLÉC -->
+
+            <div class="section-header">
+
+                <h2>
+                    📋 Feladatlista
+                </h2>
+
+                <span id="taskTotal">
+                    0 db
+                </span>
+
+            </div>
+
+
+
+            <!-- LISTA -->
+
+            <div
+                id="tasksList"
+                class="tasks-list"
+            ></div>
+
+
+
+            <!-- NINCS FELADAT -->
+
+            <div
+                id="emptyTasks"
+                class="empty-tasks"
+            >
+
+                <div class="empty-icon">
+                    ✅
+                </div>
+
+                <h3>
+                    Még nincs feladatod
+                </h3>
+
+                <p>
+                    Adj hozzá egy feladatot fent.
+                </p>
+
+            </div>
+
+
+
+            <!-- NINCS TALÁLAT -->
+
+            <div
+                id="noTaskResults"
+                class="empty-tasks no-task-results"
+            >
+
+                <div class="empty-icon">
+                    🔍
+                </div>
+
+                <h3>
+                    Nincs találat
+                </h3>
+
+                <p>
+                    Próbálj más keresést vagy szűrőt.
+                </p>
+
+            </div>
+
+        </section>
+
     </main>
+
+
+
+    <!-- =========================================
+         JAVASCRIPT
+    ========================================= -->
+
+    <script src="../script.js"></script>
+    <script src="tasks.js"></script>
+
 
 </body>
 
