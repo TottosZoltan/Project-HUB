@@ -42,9 +42,15 @@ a {
 
 .header p {
     margin-top: 5px;
+
     color: #777c89;
     font-size: 12px;
 }
+
+
+/* =========================
+   MENÜ GOMB
+========================= */
 
 .menu-button {
     width: 44px;
@@ -57,6 +63,14 @@ a {
     color: white;
 
     font-size: 20px;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.menu-button:active {
+    transform: scale(0.92);
 }
 
 
@@ -69,6 +83,7 @@ main {
     max-width: 700px;
 
     margin: auto;
+
     padding: 25px 18px 50px;
 }
 
@@ -83,14 +98,18 @@ main {
 
 .small-title {
     color: #737987;
+
     font-size: 11px;
     font-weight: bold;
+
     letter-spacing: 2px;
+
     margin-bottom: 8px;
 }
 
 .welcome h2 {
     font-size: 28px;
+
     margin-bottom: 8px;
 }
 
@@ -138,6 +157,8 @@ main {
     width: 45px;
     height: 45px;
 
+    flex-shrink: 0;
+
     display: flex;
     align-items: center;
     justify-content: center;
@@ -151,12 +172,15 @@ main {
 
 .app-card h3 {
     font-size: 15px;
+
     margin-bottom: 5px;
 }
 
 .app-card p {
     color: #777d8a;
+
     font-size: 11px;
+
     line-height: 1.3;
 }
 
@@ -179,6 +203,7 @@ main {
 
 .section-header {
     display: flex;
+
     justify-content: space-between;
     align-items: center;
 
@@ -191,6 +216,7 @@ main {
 
 .section-header span {
     color: #777d8a;
+
     font-size: 12px;
 }
 
@@ -227,31 +253,11 @@ main {
 
 .stat span {
     color: #777d8a;
+
     font-size: 11px;
 }
 
 
-/* =========================
-   NAGYOBB KIJELZŐ
-========================= */
-
-@media (min-width: 700px) {
-
-    .header {
-        padding: 20px calc((100% - 700px) / 2 + 18px);
-    }
-
-    .apps {
-        grid-template-columns: repeat(4, 1fr);
-    }
-
-    .app-card {
-        flex-direction: column;
-        text-align: center;
-        justify-content: center;
-    }
-
-}
 /* =========================
    OLDALSÓ MENÜ
 ========================= */
@@ -278,12 +284,17 @@ main {
     transition: transform 0.3s ease;
 }
 
+
+/* MENÜ NYITVA */
+
 .side-menu.open {
     transform: translateX(0);
 }
 
 
-/* MENÜ FEJLÉC */
+/* =========================
+   MENÜ FEJLÉC
+========================= */
 
 .menu-header {
     display: flex;
@@ -298,14 +309,21 @@ main {
 
 .menu-header h2 {
     font-size: 16px;
+
     letter-spacing: 2px;
 }
+
+
+/* =========================
+   BEZÁRÓ GOMB
+========================= */
 
 .close-button {
     width: 40px;
     height: 40px;
 
     border: 1px solid #292d38;
+
     border-radius: 10px;
 
     background: #20242e;
@@ -313,10 +331,20 @@ main {
     color: white;
 
     font-size: 18px;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.close-button:active {
+    transform: scale(0.9);
 }
 
 
-/* MENÜ LINKJEK */
+/* =========================
+   MENÜ LINKJEK
+========================= */
 
 .menu-links {
     display: flex;
@@ -347,7 +375,9 @@ main {
 }
 
 
-/* HÁTTÉR */
+/* =========================
+   MENÜ HÁTTÉR
+========================= */
 
 .menu-overlay {
     position: fixed;
@@ -365,8 +395,36 @@ main {
     transition: opacity 0.3s ease;
 }
 
+
+/* HÁTTÉR AKTÍV */
+
 .menu-overlay.open {
     opacity: 1;
 
     pointer-events: auto;
+}
+
+
+/* =========================
+   NAGYOBB KIJELZŐ
+========================= */
+
+@media (min-width: 700px) {
+
+    .header {
+        padding: 20px calc((100% - 700px) / 2 + 18px);
+    }
+
+    .apps {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .app-card {
+        flex-direction: column;
+
+        text-align: center;
+
+        justify-content: center;
+    }
+
 }
