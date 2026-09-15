@@ -98,6 +98,8 @@ document.addEventListener(
 
                                 },
 
+                                credentials: "include",
+                                
                                 body:
                                     JSON.stringify({
 
