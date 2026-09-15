@@ -55,7 +55,7 @@ function createPreview(text) {
 
     const words = text.trim().split(/\s+/);
 
-    const previewWordCount = 20;
+    const previewWordCount = 10;
 
     if (words.length <= previewWordCount) {
         return text;
