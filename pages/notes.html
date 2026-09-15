@@ -2,31 +2,65 @@
 <html lang="hu">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Jegyzetek - Project Hub</title>
 
-    <link rel="stylesheet" href="../style.css">
+    <link
+        rel="stylesheet"
+        href="../style.css"
+    >
+
 </head>
 
+
 <body>
+
+
+    <!-- =========================
+         FEJLÉC
+    ========================== -->
 
     <header class="header">
 
         <div>
+
             <h1>JEGYZETEK</h1>
+
             <p>Project Hub</p>
+
         </div>
 
-        <a href="../" class="back-button">
-    <span class="back-arrow"></span>
-</a>
+
+        <!-- VISSZA -->
+
+        <a
+            href="../"
+            class="back-button"
+        >
+
+            <span class="back-arrow"></span>
+
+        </a>
 
     </header>
 
 
+
+    <!-- =========================
+         FŐ TARTALOM
+    ========================== -->
+
     <main>
+
+
+        <!-- CÍM -->
 
         <section class="welcome">
 
@@ -35,16 +69,109 @@
             </p>
 
             <h2>
-                📝 Jegyzetek
+                📝 Jegyzeteim
             </h2>
 
             <p>
-                Ide kerülnek majd a jegyzeteid.
+                Mentsd el az ötleteidet és fontos gondolataidat.
             </p>
 
         </section>
 
+
+
+        <!-- =========================
+             ÚJ JEGYZET
+        ========================== -->
+
+        <section class="notes-editor">
+
+            <input
+                type="text"
+                id="noteTitle"
+                placeholder="Jegyzet címe..."
+                maxlength="100"
+            >
+
+
+            <textarea
+                id="noteText"
+                placeholder="Írd ide a jegyzeted..."
+                rows="7"
+            ></textarea>
+
+
+            <button
+                id="saveNote"
+                class="save-note-button"
+            >
+
+                💾 Jegyzet mentése
+
+            </button>
+
+        </section>
+
+
+
+        <!-- =========================
+             JEGYZETEK
+        ========================== -->
+
+        <section class="notes-section">
+
+            <div class="section-header">
+
+                <h2>
+                    📋 Mentett jegyzetek
+                </h2>
+
+                <span id="noteTotal">
+                    0 db
+                </span>
+
+            </div>
+
+
+            <div
+                id="notesList"
+                class="notes-list"
+            ></div>
+
+
+            <!-- ÜRES ÁLLAPOT -->
+
+            <div
+                id="emptyNotes"
+                class="empty-notes"
+            >
+
+                <div class="empty-icon">
+                    📝
+                </div>
+
+                <h3>
+                    Még nincs jegyzeted
+                </h3>
+
+                <p>
+                    Írj egyet fent és mentsd el.
+                </p>
+
+            </div>
+
+        </section>
+
+
     </main>
+
+
+
+    <!-- =========================
+         JAVASCRIPT
+    ========================== -->
+
+    <script src="../script.js"></script>
 
 </body>
 
