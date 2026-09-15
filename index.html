@@ -1,404 +1,362 @@
-// =========================================
-// PROJECT HUB
-// FŐ SCRIPT
-// =========================================
+<!DOCTYPE html>
+<html lang="hu">
 
+<head>
+    <meta charset="UTF-8">
 
-// =========================================
-// DOM BETÖLTÉS
-// =========================================
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
+    <title>Project Hub</title>
 
-        // =========================================
-        // MENÜ
-        // =========================================
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+</head>
 
-        const menuButton =
-            document.getElementById("menuButton");
+<body>
 
-        const closeMenu =
-            document.getElementById("closeMenu");
+    <!-- =========================================
+         OLDALSÓ MENÜ
+    ========================================== -->
 
-        const sideMenu =
-            document.getElementById("sideMenu");
+    <nav
+        class="side-menu"
+        id="sideMenu"
+    >
 
-        const menuOverlay =
-            document.getElementById("menuOverlay");
+        <div class="menu-header">
 
+            <h2>PROJECT HUB</h2>
 
-        // =========================================
-        // MENÜ ELLENŐRZÉS
-        // =========================================
+            <button
+                type="button"
+                id="closeMenu"
+                class="close-button"
+            >
+                ✕
+            </button>
 
-        if (
-            !menuButton ||
-            !closeMenu ||
-            !sideMenu ||
-            !menuOverlay
-        ) {
+        </div>
 
-            console.error(
-                "A menü egyik eleme hiányzik az index.html-ből."
-            );
 
-            return;
+        <div class="menu-links">
 
-        }
+            <a href="pages/notes/notes.html">
+                📝 Jegyzetek
+            </a>
 
+            <a href="pages/tasks/tasks.html">
+                ✅ Feladatok
+            </a>
 
-        // =========================================
-        // MENÜ MEGNYITÁSA
-        // =========================================
+            <a href="pages/games/games.html">
+                🎮 Játékok
+            </a>
 
-        menuButton.addEventListener(
-            "click",
-            function () {
+            <a href="pages/places/places.html">
+                📍 Helyek
+            </a>
 
-                sideMenu.classList.add("open");
 
-                menuOverlay.classList.add("open");
+            <!-- BEJELENTKEZÉS -->
 
-            }
-        );
+            <a
+                href="pages/auth/login.html"
+                id="loginMenuItem"
+            >
+                🔐 Bejelentkezés
+            </a>
 
 
-        // =========================================
-        // MENÜ BEZÁRÁSA
-        // =========================================
+            <!-- FELHASZNÁLÓ -->
 
-        function closeSideMenu() {
+            <a
+                href="#"
+                id="userMenuItem"
+                style="display: none;"
+            >
+                👤
+                <span id="usernameDisplay"></span>
+            </a>
 
-            sideMenu.classList.remove("open");
 
-            menuOverlay.classList.remove("open");
+            <!-- KIJELENTKEZÉS -->
 
-        }
+            <a
+                href="#"
+                id="logoutButton"
+                style="display: none;"
+            >
+                🚪 Kijelentkezés
+            </a>
 
+        </div>
 
-        // Bezáró X
+    </nav>
 
-        closeMenu.addEventListener(
-            "click",
-            closeSideMenu
-        );
 
+    <!-- =========================================
+         MENÜ HÁTTÉR
+    ========================================== -->
 
-        // Háttérre kattintás
+    <div
+        class="menu-overlay"
+        id="menuOverlay"
+    ></div>
 
-        menuOverlay.addEventListener(
-            "click",
-            closeSideMenu
-        );
 
+    <!-- =========================================
+         FEJLÉC
+    ========================================== -->
 
-        // =========================================
-        // BACKEND
-        // =========================================
+    <header class="header">
 
-        const BACKEND_URL =
-            "https://project-hub-backend-1.onrender.com";
+        <div>
 
+            <h1>PROJECT HUB</h1>
 
-        // =========================================
-        // AUTH MENÜ ELEMEK
-        // =========================================
+            <p>
+                Saját személyes dashboard
+            </p>
 
-        const loginMenuItem =
-            document.getElementById("loginMenuItem");
+        </div>
 
-        const userMenuItem =
-            document.getElementById("userMenuItem");
 
-        const usernameDisplay =
-            document.getElementById("usernameDisplay");
+        <!-- HAMBURGER -->
 
-        const logoutButton =
-            document.getElementById("logoutButton");
+        <button
+            type="button"
+            id="menuButton"
+            class="menu-button"
+            aria-label="Menü megnyitása"
+        >
+            ☰
+        </button>
 
+    </header>
 
-        // =========================================
-        // AUTH TOKEN
-        // =========================================
 
-        function getAuthToken() {
+    <!-- =========================================
+         FŐ TARTALOM
+    ========================================== -->
 
-            return localStorage.getItem(
-                "projectHubAuthToken"
-            );
+    <main>
 
-        }
+        <!-- ÜDVÖZLŐ RÉSZ -->
 
+        <section class="welcome">
 
-        // =========================================
-        // AUTH HEADERS
-        // =========================================
+            <p class="small-title">
+                ÜDV ÚJRA 👋
+            </p>
 
-        function getAuthHeaders() {
+            <h2>
+                Mit csináljunk ma?
+            </h2>
 
-            const token =
-                getAuthToken();
+            <p>
+                Minden fontos dolgod egy helyen.
+            </p>
 
+        </section>
 
-            if (!token) {
 
-                return {};
+        <!-- =========================================
+             APP KÁRTYÁK
+        ========================================== -->
 
-            }
+        <section class="apps">
 
 
-            return {
+            <!-- JEGYZETEK -->
 
-                Authorization:
-                    "Bearer " + token
+            <a
+                href="pages/notes/notes.html"
+                class="app-card"
+            >
 
-            };
+                <span class="app-icon">
+                    📝
+                </span>
 
-        }
+                <div>
 
+                    <h3>
+                        Jegyzetek
+                    </h3>
 
-        // =========================================
-        // BEJELENTKEZÉS ELLENŐRZÉSE
-        // =========================================
+                    <p>
+                        Ötletek és jegyzetek
+                    </p>
 
-        async function checkLogin() {
+                </div>
 
-            try {
+            </a>
 
-                const response =
-                    await fetch(
-                        BACKEND_URL +
-                        "/api/auth/me",
-                        {
-                            method: "GET",
 
-                            headers:
-                                getAuthHeaders(),
+            <!-- FELADATOK -->
 
-                            credentials:
-                                "include"
-                        }
-                    );
+            <a
+                href="pages/tasks/tasks.html"
+                class="app-card"
+            >
 
+                <span class="app-icon">
+                    ✅
+                </span>
 
-                const result =
-                    await response.json();
+                <div>
 
+                    <h3>
+                        Feladatok
+                    </h3>
 
-                console.log(
-                    "Bejelentkezés ellenőrzése:",
-                    result
-                );
+                    <p>
+                        Amit el kell intézni
+                    </p>
 
+                </div>
 
-                if (
-                    response.ok &&
-                    result.success &&
-                    result.user
-                ) {
+            </a>
 
-                    // =========================================
-                    // BEJELENTKEZVE
-                    // =========================================
 
-                    if (loginMenuItem) {
+            <!-- JÁTÉKOK -->
 
-                        loginMenuItem.style.display =
-                            "none";
+            <a
+                href="pages/games/games.html"
+                class="app-card"
+            >
 
-                    }
+                <span class="app-icon">
+                    🎮
+                </span>
 
+                <div>
 
-                    if (userMenuItem) {
+                    <h3>
+                        Játékok
+                    </h3>
 
-                        userMenuItem.style.display =
-                            "flex";
+                    <p>
+                        Játékaim és értékelések
+                    </p>
 
-                    }
+                </div>
 
+            </a>
 
-                    if (logoutButton) {
 
-                        logoutButton.style.display =
-                            "flex";
+            <!-- HELYEK -->
 
-                    }
+            <a
+                href="pages/places/places.html"
+                class="app-card"
+            >
 
+                <span class="app-icon">
+                    📍
+                </span>
 
-                    if (usernameDisplay) {
+                <div>
 
-                        usernameDisplay.textContent =
-                            result.user.username;
+                    <h3>
+                        Helyek
+                    </h3>
 
-                    }
+                    <p>
+                        Érdekes helyek
+                    </p>
 
+                </div>
 
-                    console.log(
-                        "Bejelentkezett felhasználó:",
-                        result.user
-                    );
+            </a>
 
-                }
+        </section>
 
-                else {
 
-                    // =========================================
-                    // ÉRVÉNYTELEN TOKEN
-                    // =========================================
+        <!-- =========================================
+             ÁTTEKINTÉS
+        ========================================== -->
 
-                    if (
-                        response.status === 401
-                    ) {
+        <section class="overview">
 
-                        localStorage.removeItem(
-                            "projectHubAuthToken"
-                        );
+            <div class="section-header">
 
-                    }
+                <h2>
+                    📊 Áttekintés
+                </h2>
 
+                <span>
+                    Ma
+                </span>
 
-                    showLoggedOut();
+            </div>
 
-                }
 
-            }
+            <div class="stats">
 
-            catch (error) {
 
-                console.error(
-                    "Bejelentkezés ellenőrzési hiba:",
-                    error
-                );
+                <!-- FELADATOK -->
 
+                <div class="stat">
 
-                showLoggedOut();
+                    <strong id="taskCount">
+                        0
+                    </strong>
 
-            }
+                    <span>
+                        Feladat
+                    </span>
 
-        }
+                </div>
 
 
-        // =========================================
-        // KIJELENTKEZETT ÁLLAPOT
-        // =========================================
+                <!-- JEGYZETEK -->
 
-        function showLoggedOut() {
+                <div class="stat">
 
-            if (loginMenuItem) {
+                    <strong id="noteCount">
+                        0
+                    </strong>
 
-                loginMenuItem.style.display =
-                    "flex";
+                    <span>
+                        Jegyzet
+                    </span>
 
-            }
+                </div>
 
 
-            if (userMenuItem) {
+                <!-- JÁTÉKOK -->
 
-                userMenuItem.style.display =
-                    "none";
+                <div class="stat">
 
-            }
+                    <strong id="gameCount">
+                        0
+                    </strong>
 
+                    <span>
+                        Játék
+                    </span>
 
-            if (logoutButton) {
+                </div>
 
-                logoutButton.style.display =
-                    "none";
+            </div>
 
-            }
+        </section>
 
+    </main>
 
-            if (usernameDisplay) {
 
-                usernameDisplay.textContent =
-                    "";
+    <!-- =========================================
+         JAVASCRIPT
+    ========================================== -->
 
-            }
+    <script src="script.js"></script>
 
-        }
+</body>
 
-
-        // =========================================
-        // KIJELENTKEZÉS
-        // =========================================
-
-        if (logoutButton) {
-
-            logoutButton.addEventListener(
-                "click",
-                async function (event) {
-
-                    event.preventDefault();
-
-
-                    try {
-
-                        const response =
-                            await fetch(
-                                BACKEND_URL +
-                                "/api/auth/logout",
-                                {
-                                    method: "POST",
-
-                                    headers:
-                                        getAuthHeaders(),
-
-                                    credentials:
-                                        "include"
-                                }
-                            );
-
-
-                        const result =
-                            await response.json();
-
-
-                        console.log(
-                            "Kijelentkezés:",
-                            result
-                        );
-
-                    }
-
-                    catch (error) {
-
-                        console.error(
-                            "Kijelentkezési hiba:",
-                            error
-                        );
-
-                    }
-
-
-                    // Token törlése
-
-                    localStorage.removeItem(
-                        "projectHubAuthToken"
-                    );
-
-
-                    // Menü bezárása
-
-                    closeSideMenu();
-
-
-                    // Oldal frissítése
-
-                    window.location.reload();
-
-                }
-            );
-
-        }
-
-
-        // =========================================
-        // INDÍTÁS
-        // =========================================
-
-        checkLogin();
-
-    }
-);
+</html>
