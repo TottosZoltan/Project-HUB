@@ -112,6 +112,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 // =========================================
+                // AUTH TOKEN MENTÉSE
+                // =========================================
+
+                if (
+                    result.token
+                ) {
+
+                    localStorage.setItem(
+                        "projectHubAuthToken",
+                        result.token
+                    );
+
+                    console.log(
+                        "Auth token sikeresen elmentve."
+                    );
+
+                }
+
+
+                // =========================================
                 // SIKER
                 // =========================================
 
@@ -127,8 +147,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 // =========================================
-                // SESSION ELLENŐRZÉS
+                // SESSION / TOKEN ELLENŐRZÉS
                 // =========================================
+
+                const authToken =
+                    localStorage.getItem(
+                        "projectHubAuthToken"
+                    );
+
+
+                const requestHeaders = {};
+
+
+                if (
+                    authToken
+                ) {
+
+                    requestHeaders.Authorization =
+                        "Bearer " +
+                        authToken;
+
+                }
+
 
                 const meResponse =
                     await fetch(
@@ -136,7 +176,12 @@ document.addEventListener("DOMContentLoaded", function () {
                         "/api/auth/me",
                         {
                             method: "GET",
-                            credentials: "include"
+
+                            headers:
+                                requestHeaders,
+
+                            credentials:
+                                "include"
                         }
                     );
 
@@ -178,6 +223,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     showError(
                         "A bejelentkezés sikerült, de a munkamenetet nem sikerült ellenőrizni."
                     );
+
                 }
 
             }
