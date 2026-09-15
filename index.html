@@ -15,6 +15,22 @@
         rel="stylesheet"
         href="style.css"
     >
+
+    <!--
+        Az app alapból rejtve van.
+        Csak sikeres bejelentkezés után
+        jeleníti meg a script.js.
+    -->
+    <style>
+        body {
+            visibility: hidden;
+        }
+
+        body.authenticated {
+            visibility: visible;
+        }
+    </style>
+
 </head>
 
 <body>
