@@ -312,15 +312,6 @@ async function initializeDatabase() {
     // ==================================================
     // TEXT <-> CONTENT SZINKRONIZÁLÁS
     // ==================================================
-    //
-    // Régi jegyzeteknél előfordulhat, hogy:
-    //
-    // text = régi szöveg
-    // content = üres
-    //
-    // Ezért a régi text értékét átmásoljuk content-be.
-    //
-    // ==================================================
 
     await pool.query(`
         UPDATE notes
@@ -337,12 +328,6 @@ async function initializeDatabase() {
 
     // ==================================================
     // CONTENT -> TEXT SZINKRON
-    // ==================================================
-    //
-    // Biztonsági migráció:
-    // ha content létezik, de text üres,
-    // akkor text is megkapja.
-    //
     // ==================================================
 
     await pool.query(`
@@ -450,6 +435,240 @@ async function initializeDatabase() {
 
     console.log(
         "Adatbázis inicializálása kész."
+    );
+}
+
+
+// ======================================================
+// TASKS DATABASE INITIALIZATION
+// ======================================================
+//
+// A TASKS ugyanazt a tulajdonosi rendszert használja,
+// mint a NOTES.
+//
+// token
+//   ↓
+// auth_tokens
+//   ↓
+// user_id
+//   ↓
+// owner_tag
+//   ↓
+// tasks
+//
+// A frontend által küldött user_id / owner_tag
+// nem határozza meg a tulajdonost.
+//
+// ======================================================
+
+async function initializeTasksDatabase() {
+
+    console.log(
+        "Tasks adatbázis inicializálása..."
+    );
+
+
+    // ==================================================
+    // TASKS TÁBLA
+    // ==================================================
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS tasks (
+            id SERIAL PRIMARY KEY,
+
+            user_id INTEGER,
+
+            owner_tag TEXT,
+
+            title TEXT
+                NOT NULL DEFAULT '',
+
+            description TEXT
+                NOT NULL DEFAULT '',
+
+            completed BOOLEAN
+                NOT NULL DEFAULT FALSE,
+
+            priority VARCHAR(50)
+                NOT NULL DEFAULT 'normal',
+
+            category VARCHAR(100)
+                NOT NULL DEFAULT 'Egyéb',
+
+            due_date TIMESTAMP,
+
+            pinned BOOLEAN
+                NOT NULL DEFAULT FALSE,
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP,
+
+            updated_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+
+
+    // ==================================================
+    // RÉGI TASKS TÁBLA MIGRÁCIÓ
+    // ==================================================
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS user_id INTEGER;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS owner_tag TEXT;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS title TEXT
+        NOT NULL DEFAULT '';
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS description TEXT
+        NOT NULL DEFAULT '';
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS completed BOOLEAN
+        NOT NULL DEFAULT FALSE;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS priority VARCHAR(50)
+        NOT NULL DEFAULT 'normal';
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS category VARCHAR(100)
+        NOT NULL DEFAULT 'Egyéb';
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS due_date TIMESTAMP;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS pinned BOOLEAN
+        NOT NULL DEFAULT FALSE;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS created_at
+        TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE tasks
+        ADD COLUMN IF NOT EXISTS updated_at
+        TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    `);
+
+
+    // ==================================================
+    // OWNER TAG KITÖLTÉS
+    // ==================================================
+
+    await pool.query(`
+        UPDATE tasks
+        SET owner_tag =
+            'USER-' || user_id::TEXT
+        WHERE
+            owner_tag IS NULL
+            AND user_id IS NOT NULL;
+    `);
+
+
+    // ==================================================
+    // TASKS USER ID FOREIGN KEY
+    // ==================================================
+
+    await pool.query(`
+        DO $$
+        BEGIN
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_constraint
+                WHERE conname =
+                    'tasks_user_id_fkey'
+            )
+            THEN
+
+                ALTER TABLE tasks
+                ADD CONSTRAINT
+                    tasks_user_id_fkey
+                FOREIGN KEY (user_id)
+                REFERENCES users(id)
+                ON DELETE CASCADE;
+
+            END IF;
+
+        END
+        $$;
+    `);
+
+
+    // ==================================================
+    // TASKS USER ID INDEX
+    // ==================================================
+
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS
+        tasks_user_id_idx
+        ON tasks(user_id);
+    `);
+
+
+    // ==================================================
+    // TASKS USER + UPDATED INDEX
+    // ==================================================
+
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS
+        tasks_user_updated_idx
+        ON tasks(
+            user_id,
+            updated_at DESC
+        );
+    `);
+
+
+    // ==================================================
+    // TASKS OWNER TAG INDEX
+    // ==================================================
+
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS
+        tasks_owner_tag_idx
+        ON tasks(owner_tag);
+    `);
+
+
+    console.log(
+        "Tasks adatbázis inicializálása kész."
     );
 }
 
@@ -708,6 +927,54 @@ async function getAuthenticatedUser(req) {
 // ======================================================
 
 async function getAuthenticatedNotesUser(req) {
+
+    const bearerToken =
+        getBearerToken(req);
+
+
+    if (!bearerToken) {
+
+        return null;
+
+    }
+
+
+    const user =
+        await getUserFromAuthToken(
+            bearerToken
+        );
+
+
+    if (!user) {
+
+        return null;
+
+    }
+
+
+    return user;
+}
+
+
+// ======================================================
+// TASK AUTH
+// ======================================================
+//
+// A TASKS modulban sincs session fallback.
+//
+// Kizárólag:
+//
+// Bearer token
+//      ↓
+// auth_tokens
+//      ↓
+// user_id
+//      ↓
+// users.id
+//
+// ======================================================
+
+async function getAuthenticatedTasksUser(req) {
 
     const bearerToken =
         getBearerToken(req);
@@ -1672,20 +1939,6 @@ app.get(
 // ======================================================
 // NOTES - CREATE
 // ======================================================
-//
-// A kliens által küldött:
-// - user_id
-// - userId
-// - owner_tag
-// - ownerTag
-//
-// NEM számít.
-//
-// A tulajdonos kizárólag:
-//
-// token -> users.id
-//
-// ======================================================
 
 app.post(
     "/api/notes",
@@ -1713,10 +1966,6 @@ app.post(
             }
 
 
-            // ==================================================
-            // BACKEND ÁLTAL MEGHATÁROZOTT TULAJDONOS
-            // ==================================================
-
             const ownerUserId =
                 user.id;
 
@@ -1726,10 +1975,6 @@ app.post(
                     ownerUserId
                 );
 
-
-            // ==================================================
-            // USER INPUT
-            // ==================================================
 
             const title =
                 typeof req.body.title ===
@@ -1761,10 +2006,6 @@ app.post(
                 req.body.pinned === true;
 
 
-            // ==================================================
-            // VALIDATION
-            // ==================================================
-
             if (
                 !title ||
                 !content
@@ -1781,20 +2022,6 @@ app.post(
 
             }
 
-
-            // ==================================================
-            // CREATE
-            // ==================================================
-            //
-            // FONTOS:
-            //
-            // text    = content
-            // content = content
-            //
-            // Így a régi DB struktúra és az új API
-            // egyszerre működik.
-            //
-            // ==================================================
 
             const result =
                 await pool.query(
@@ -1834,15 +2061,9 @@ app.post(
                         ownerUserId,
                         ownerTag,
                         title,
-
-                        // text
                         content,
-
-                        // content
                         content,
-
                         category || "Egyéb",
-
                         pinned
                     ]
                 );
@@ -1943,10 +2164,6 @@ app.put(
                 );
 
 
-            // ==================================================
-            // USER INPUT
-            // ==================================================
-
             const title =
                 typeof req.body.title ===
                 "string"
@@ -1977,10 +2194,6 @@ app.put(
                 req.body.pinned === true;
 
 
-            // ==================================================
-            // VALIDATION
-            // ==================================================
-
             if (
                 !title ||
                 !content
@@ -1998,20 +2211,6 @@ app.put(
             }
 
 
-            // ==================================================
-            // UPDATE
-            // ==================================================
-            //
-            // Ellenőrzés:
-            //
-            // ID
-            // +
-            // user_id
-            // +
-            // owner_tag
-            //
-            // ==================================================
-
             const result =
                 await pool.query(
                     `
@@ -2019,23 +2218,16 @@ app.put(
 
                     SET
                         title = $1,
-
                         text = $2,
-
                         content = $3,
-
                         category = $4,
-
                         pinned = $5,
-
                         updated_at =
                             CURRENT_TIMESTAMP
 
                     WHERE
                         id = $6
-
                         AND user_id = $7
-
                         AND owner_tag = $8
 
                     RETURNING
@@ -2051,21 +2243,12 @@ app.put(
                     `,
                     [
                         title,
-
-                        // text
                         content,
-
-                        // content
                         content,
-
                         category || "Egyéb",
-
                         pinned,
-
                         noteId,
-
                         ownerUserId,
-
                         ownerTag
                     ]
                 );
@@ -2189,9 +2372,7 @@ app.delete(
 
                     WHERE
                         id = $1
-
                         AND user_id = $2
-
                         AND owner_tag = $3
 
                     RETURNING id
@@ -2244,6 +2425,797 @@ app.delete(
 
                 message:
                     "Nem sikerült törölni a jegyzetet."
+
+            });
+
+        }
+
+    }
+);
+
+
+// ======================================================
+// TASKS - GET
+// ======================================================
+//
+// A user kizárólag a Bearer tokenből származik.
+//
+// token
+//   ↓
+// auth_tokens.user_id
+//   ↓
+// users.id
+//   ↓
+// tasks.user_id
+//
+// Másik user feladatai nem kerülnek vissza.
+//
+// ======================================================
+
+app.get(
+    "/api/tasks",
+    async function (req, res) {
+
+        try {
+
+            const user =
+                await getAuthenticatedTasksUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges a feladatokhoz."
+
+                });
+
+            }
+
+
+            const ownerTag =
+                createOwnerTag(
+                    user.id
+                );
+
+
+            const result =
+                await pool.query(
+                    `
+                    SELECT
+                        id,
+                        user_id,
+                        owner_tag,
+                        title,
+                        description,
+                        completed,
+                        priority,
+                        category,
+                        due_date,
+                        pinned,
+                        created_at,
+                        updated_at
+
+                    FROM tasks
+
+                    WHERE
+                        user_id = $1
+
+                        AND owner_tag = $2
+
+                    ORDER BY
+                        completed ASC,
+                        pinned DESC,
+                        updated_at DESC
+                    `,
+                    [
+                        user.id,
+                        ownerTag
+                    ]
+                );
+
+
+            return res.json({
+
+                success: true,
+
+                user: {
+
+                    id:
+                        user.id,
+
+                    username:
+                        user.username
+
+                },
+
+                tasks:
+                    result.rows
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "TASKS GET HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült betölteni a feladatokat."
+
+            });
+
+        }
+
+    }
+);
+
+
+// ======================================================
+// TASKS - CREATE
+// ======================================================
+//
+// A kliens által küldött:
+//
+// user_id
+// userId
+// owner_tag
+// ownerTag
+//
+// NEM számít.
+//
+// A tulajdonos kizárólag:
+//
+// token -> users.id
+//
+// ======================================================
+
+app.post(
+    "/api/tasks",
+    async function (req, res) {
+
+        try {
+
+            const user =
+                await getAuthenticatedTasksUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges a feladathoz."
+
+                });
+
+            }
+
+
+            // ==================================================
+            // BACKEND ÁLTAL MEGHATÁROZOTT TULAJDONOS
+            // ==================================================
+
+            const ownerUserId =
+                user.id;
+
+
+            const ownerTag =
+                createOwnerTag(
+                    ownerUserId
+                );
+
+
+            // ==================================================
+            // USER INPUT
+            // ==================================================
+
+            const title =
+                typeof req.body.title ===
+                "string"
+                    ? req.body.title.trim()
+                    : "";
+
+
+            const description =
+                typeof req.body.description ===
+                "string"
+                    ? req.body.description
+                    : "";
+
+
+            const completed =
+                req.body.completed === true;
+
+
+            const priority =
+                typeof req.body.priority ===
+                "string"
+                    ? req.body.priority.trim()
+                    : "normal";
+
+
+            const category =
+                typeof req.body.category ===
+                "string"
+                    ? req.body.category.trim()
+                    : "Egyéb";
+
+
+            const pinned =
+                req.body.pinned === true;
+
+
+            let dueDate = null;
+
+
+            if (
+                req.body.due_date !== null &&
+                req.body.due_date !== undefined &&
+                req.body.due_date !== ""
+            ) {
+
+                const parsedDate =
+                    new Date(
+                        req.body.due_date
+                    );
+
+
+                if (
+                    Number.isNaN(
+                        parsedDate.getTime()
+                    )
+                ) {
+
+                    return res.status(400).json({
+
+                        success: false,
+
+                        message:
+                            "Érvénytelen határidő."
+
+                    });
+
+                }
+
+
+                dueDate =
+                    parsedDate;
+
+            }
+
+
+            // ==================================================
+            // VALIDATION
+            // ==================================================
+
+            if (!title) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "A feladat címe kötelező."
+
+                });
+
+            }
+
+
+            // ==================================================
+            // CREATE
+            // ==================================================
+
+            const result =
+                await pool.query(
+                    `
+                    INSERT INTO tasks (
+                        user_id,
+                        owner_tag,
+                        title,
+                        description,
+                        completed,
+                        priority,
+                        category,
+                        due_date,
+                        pinned
+                    )
+
+                    VALUES (
+                        $1,
+                        $2,
+                        $3,
+                        $4,
+                        $5,
+                        $6,
+                        $7,
+                        $8,
+                        $9
+                    )
+
+                    RETURNING
+                        id,
+                        user_id,
+                        owner_tag,
+                        title,
+                        description,
+                        completed,
+                        priority,
+                        category,
+                        due_date,
+                        pinned,
+                        created_at,
+                        updated_at
+                    `,
+                    [
+                        ownerUserId,
+                        ownerTag,
+                        title,
+                        description,
+                        completed,
+                        priority || "normal",
+                        category || "Egyéb",
+                        dueDate,
+                        pinned
+                    ]
+                );
+
+
+            return res.status(201).json({
+
+                success: true,
+
+                task:
+                    result.rows[0]
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "TASK CREATE HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült létrehozni a feladatot."
+
+            });
+
+        }
+
+    }
+);
+
+
+// ======================================================
+// TASKS - UPDATE
+// ======================================================
+//
+// Ellenőrzés:
+//
+// ID
+// +
+// user_id
+// +
+// owner_tag
+//
+// ======================================================
+
+app.put(
+    "/api/tasks/:id",
+    async function (req, res) {
+
+        try {
+
+            const user =
+                await getAuthenticatedTasksUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges."
+
+                });
+
+            }
+
+
+            const taskId =
+                Number(
+                    req.params.id
+                );
+
+
+            if (
+                !Number.isInteger(taskId)
+            ) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "Érvénytelen feladat azonosító."
+
+                });
+
+            }
+
+
+            const ownerUserId =
+                user.id;
+
+
+            const ownerTag =
+                createOwnerTag(
+                    ownerUserId
+                );
+
+
+            // ==================================================
+            // USER INPUT
+            // ==================================================
+
+            const title =
+                typeof req.body.title ===
+                "string"
+                    ? req.body.title.trim()
+                    : "";
+
+
+            const description =
+                typeof req.body.description ===
+                "string"
+                    ? req.body.description
+                    : "";
+
+
+            const completed =
+                req.body.completed === true;
+
+
+            const priority =
+                typeof req.body.priority ===
+                "string"
+                    ? req.body.priority.trim()
+                    : "normal";
+
+
+            const category =
+                typeof req.body.category ===
+                "string"
+                    ? req.body.category.trim()
+                    : "Egyéb";
+
+
+            const pinned =
+                req.body.pinned === true;
+
+
+            let dueDate = null;
+
+
+            if (
+                req.body.due_date !== null &&
+                req.body.due_date !== undefined &&
+                req.body.due_date !== ""
+            ) {
+
+                const parsedDate =
+                    new Date(
+                        req.body.due_date
+                    );
+
+
+                if (
+                    Number.isNaN(
+                        parsedDate.getTime()
+                    )
+                ) {
+
+                    return res.status(400).json({
+
+                        success: false,
+
+                        message:
+                            "Érvénytelen határidő."
+
+                    });
+
+                }
+
+
+                dueDate =
+                    parsedDate;
+
+            }
+
+
+            // ==================================================
+            // VALIDATION
+            // ==================================================
+
+            if (!title) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "A feladat címe kötelező."
+
+                });
+
+            }
+
+
+            // ==================================================
+            // UPDATE
+            // ==================================================
+
+            const result =
+                await pool.query(
+                    `
+                    UPDATE tasks
+
+                    SET
+                        title = $1,
+
+                        description = $2,
+
+                        completed = $3,
+
+                        priority = $4,
+
+                        category = $5,
+
+                        due_date = $6,
+
+                        pinned = $7,
+
+                        updated_at =
+                            CURRENT_TIMESTAMP
+
+                    WHERE
+                        id = $8
+
+                        AND user_id = $9
+
+                        AND owner_tag = $10
+
+                    RETURNING
+                        id,
+                        user_id,
+                        owner_tag,
+                        title,
+                        description,
+                        completed,
+                        priority,
+                        category,
+                        due_date,
+                        pinned,
+                        created_at,
+                        updated_at
+                    `,
+                    [
+                        title,
+                        description,
+                        completed,
+                        priority || "normal",
+                        category || "Egyéb",
+                        dueDate,
+                        pinned,
+                        taskId,
+                        ownerUserId,
+                        ownerTag
+                    ]
+                );
+
+
+            if (
+                result.rows.length === 0
+            ) {
+
+                return res.status(404).json({
+
+                    success: false,
+
+                    message:
+                        "A feladat nem található, vagy nem a te feladatod."
+
+                });
+
+            }
+
+
+            return res.json({
+
+                success: true,
+
+                task:
+                    result.rows[0]
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "TASK UPDATE HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült módosítani a feladatot."
+
+            });
+
+        }
+
+    }
+);
+
+
+// ======================================================
+// TASKS - DELETE
+// ======================================================
+
+app.delete(
+    "/api/tasks/:id",
+    async function (req, res) {
+
+        try {
+
+            const user =
+                await getAuthenticatedTasksUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges."
+
+                });
+
+            }
+
+
+            const taskId =
+                Number(
+                    req.params.id
+                );
+
+
+            if (
+                !Number.isInteger(taskId)
+            ) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "Érvénytelen feladat azonosító."
+
+                });
+
+            }
+
+
+            const ownerUserId =
+                user.id;
+
+
+            const ownerTag =
+                createOwnerTag(
+                    ownerUserId
+                );
+
+
+            const result =
+                await pool.query(
+                    `
+                    DELETE FROM tasks
+
+                    WHERE
+                        id = $1
+
+                        AND user_id = $2
+
+                        AND owner_tag = $3
+
+                    RETURNING id
+                    `,
+                    [
+                        taskId,
+                        ownerUserId,
+                        ownerTag
+                    ]
+                );
+
+
+            if (
+                result.rows.length === 0
+            ) {
+
+                return res.status(404).json({
+
+                    success: false,
+
+                    message:
+                        "A feladat nem található, vagy nem a te feladatod."
+
+                });
+
+            }
+
+
+            return res.json({
+
+                success: true,
+
+                message:
+                    "Feladat törölve."
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "TASK DELETE HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült törölni a feladatot."
 
             });
 
@@ -2419,7 +3391,18 @@ async function startServer() {
 
     try {
 
+        // ==================================================
+        // ALAP ADATBÁZIS
+        // ==================================================
+
         await initializeDatabase();
+
+
+        // ==================================================
+        // TASKS ADATBÁZIS
+        // ==================================================
+
+        await initializeTasksDatabase();
 
 
         app.listen(
