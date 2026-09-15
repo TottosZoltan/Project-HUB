@@ -38,7 +38,6 @@ document.addEventListener("DOMContentLoaded", function () {
         function () {
 
             sideMenu.classList.add("open");
-
             menuOverlay.classList.add("open");
 
         }
@@ -50,7 +49,6 @@ document.addEventListener("DOMContentLoaded", function () {
         function () {
 
             sideMenu.classList.remove("open");
-
             menuOverlay.classList.remove("open");
 
         }
@@ -62,7 +60,6 @@ document.addEventListener("DOMContentLoaded", function () {
         function () {
 
             sideMenu.classList.remove("open");
-
             menuOverlay.classList.remove("open");
 
         }
@@ -78,7 +75,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =========================================
-    // BEJELENTKEZÉS MENÜ
+    // AUTH MENÜ ELEMEK
     // =========================================
 
     const loginMenuItem =
@@ -94,7 +91,6 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("logoutButton");
 
 
-    // Ha nincs auth menü, nincs további teendő
     if (
         !loginMenuItem ||
         !userMenuItem ||
@@ -102,13 +98,17 @@ document.addEventListener("DOMContentLoaded", function () {
         !logoutButton
     ) {
 
+        console.error(
+            "Az auth menü egyik eleme hiányzik."
+        );
+
         return;
 
     }
 
 
     // =========================================
-    // BEJELENTKEZETT FELHASZNÁLÓ ELLENŐRZÉSE
+    // SESSION ELLENŐRZÉS
     // =========================================
 
     async function checkLogin() {
@@ -144,10 +144,19 @@ document.addEventListener("DOMContentLoaded", function () {
                     "none";
 
                 userMenuItem.style.display =
-                    "block";
+                    "flex";
+
+                logoutButton.style.display =
+                    "flex";
 
                 usernameDisplay.textContent =
                     result.user.username;
+
+
+                console.log(
+                    "Bejelentkezett felhasználó:",
+                    result.user
+                );
 
             }
 
@@ -158,9 +167,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 // =========================================
 
                 loginMenuItem.style.display =
-                    "block";
+                    "flex";
 
                 userMenuItem.style.display =
+                    "none";
+
+                logoutButton.style.display =
                     "none";
 
             }
@@ -175,9 +187,12 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
             loginMenuItem.style.display =
-                "block";
+                "flex";
 
             userMenuItem.style.display =
+                "none";
+
+            logoutButton.style.display =
                 "none";
 
         }
@@ -213,7 +228,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     await response.json();
 
 
-                if (response.ok && result.success) {
+                if (
+                    response.ok &&
+                    result.success
+                ) {
 
                     window.location.reload();
 
@@ -244,7 +262,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =========================================
-    // SESSION ELLENŐRZÉS INDÍTÁSA
+    // INDÍTÁS
     // =========================================
 
     checkLogin();
