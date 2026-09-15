@@ -1,291 +1,254 @@
-```javascript
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
+document.addEventListener("DOMContentLoaded", function () {
 
+    // =========================================
+    // BACKEND
+    // =========================================
 
-        // =========================================
-        // BACKEND
-        // =========================================
+    const BACKEND_URL =
+        "https://project-hub-backend-1.onrender.com";
 
-        const BACKEND_URL =
-            "https://project-hub-backend-1.onrender.com";
 
+    // =========================================
+    // ELEMEK
+    // =========================================
 
-        // =========================================
-        // ELEMEK
-        // =========================================
+    const loginForm =
+        document.getElementById("loginForm");
 
-        const loginForm =
-            document.getElementById(
-                "loginForm"
-            );
+    const loginButton =
+        document.getElementById("loginButton");
 
+    const loginMessage =
+        document.getElementById("loginMessage");
 
-        const loginButton =
-            document.getElementById(
-                "loginButton"
-            );
 
+    if (
+        !loginForm ||
+        !loginButton ||
+        !loginMessage
+    ) {
 
-        const loginMessage =
-            document.getElementById(
-                "loginMessage"
-            );
+        console.error(
+            "A bejelentkezési oldal egyik eleme hiányzik."
+        );
 
+        return;
+    }
 
-        if (
-            !loginForm ||
-            !loginButton ||
-            !loginMessage
-        ) {
 
-            console.error(
-                "A bejelentkezési oldal egyik eleme hiányzik."
-            );
+    // =========================================
+    // BEJELENTKEZÉS
+    // =========================================
 
-            return;
+    loginForm.addEventListener(
+        "submit",
+        async function (event) {
 
-        }
+            event.preventDefault();
 
 
-        // =========================================
-        // BEJELENTKEZÉS
-        // =========================================
+            const email =
+                document
+                    .getElementById("email")
+                    .value
+                    .trim();
 
-        loginForm.addEventListener(
-            "submit",
-            async function (event) {
+            const password =
+                document
+                    .getElementById("password")
+                    .value;
 
-                event.preventDefault();
 
+            clearMessage();
 
-                const email =
-                    document
-                        .getElementById("email")
-                        .value
-                        .trim();
 
+            loginButton.disabled = true;
 
-                const password =
-                    document
-                        .getElementById("password")
-                        .value;
+            loginButton.textContent =
+                "Bejelentkezés...";
 
 
-                clearMessage();
+            try {
 
+                // =========================================
+                // LOGIN
+                // =========================================
 
-                loginButton.disabled = true;
+                const response =
+                    await fetch(
+                        BACKEND_URL +
+                        "/api/auth/login",
+                        {
+                            method: "POST",
 
-                loginButton.textContent =
-                    "Bejelentkezés...";
-
-
-                try {
-
-                    // =========================================
-                    // LOGIN KÉRÉS
-                    // =========================================
-
-                    const response =
-                        await fetch(
-                            BACKEND_URL +
-                            "/api/auth/login",
-                            {
-
-                                method: "POST",
-
-                                headers: {
-
-                                    "Content-Type":
-                                        "application/json"
-
-                                },
-
-                                credentials: "include",
-
-                                body:
-                                    JSON.stringify({
-
-                                        email:
-                                            email,
-
-                                        password:
-                                            password
-
-                                    })
-
-                            }
-                        );
-
-
-                    const result =
-                        await response.json();
-
-
-                    if (!response.ok) {
-
-                        throw new Error(
-                            result.message ||
-                            "A bejelentkezés sikertelen."
-                        );
-
-                    }
-
-
-                    // =========================================
-                    // SIKERES BEJELENTKEZÉS
-                    // =========================================
-
-                    showSuccess(
-                        "Sikeres bejelentkezés!"
-                    );
-
-
-                    console.log(
-                        "Bejelentkezett felhasználó:",
-                        result.user
-                    );
-
-
-                    // =========================================
-                    // SESSION ELLENŐRZÉS
-                    // =========================================
-
-                    const meResponse =
-                        await fetch(
-                            BACKEND_URL +
-                            "/api/auth/me",
-                            {
-                                method: "GET",
-
-                                credentials:
-                                    "include"
-                            }
-                        );
-
-
-                    const meResult =
-                        await meResponse.json();
-
-
-                    console.log(
-                        "Session ellenőrzés:",
-                        meResult
-                    );
-
-
-                    // =========================================
-                    // SESSION SIKERES
-                    // =========================================
-
-                    if (
-                        meResponse.ok &&
-                        meResult.success &&
-                        meResult.user
-                    ) {
-
-                        setTimeout(
-                            function () {
-
-                                window.location.href =
-                                    "../index.html";
-
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
                             },
-                            800
-                        );
 
-                    }
+                            credentials:
+                                "include",
 
-                    else {
+                            body:
+                                JSON.stringify({
+                                    email: email,
+                                    password: password
+                                })
+                        }
+                    );
 
-                        showError(
-                            "A bejelentkezés sikerült, de a munkamenetet nem sikerült ellenőrizni."
-                        );
 
-                    }
+                const result =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        result.message ||
+                        "A bejelentkezés sikertelen."
+                    );
+                }
+
+
+                // =========================================
+                // SIKER
+                // =========================================
+
+                showSuccess(
+                    "Sikeres bejelentkezés!"
+                );
+
+
+                console.log(
+                    "Bejelentkezett felhasználó:",
+                    result.user
+                );
+
+
+                // =========================================
+                // SESSION ELLENŐRZÉS
+                // =========================================
+
+                const meResponse =
+                    await fetch(
+                        BACKEND_URL +
+                        "/api/auth/me",
+                        {
+                            method: "GET",
+                            credentials: "include"
+                        }
+                    );
+
+
+                const meResult =
+                    await meResponse.json();
+
+
+                console.log(
+                    "Session ellenőrzés:",
+                    meResult
+                );
+
+
+                // =========================================
+                // SESSION RENDBEN
+                // =========================================
+
+                if (
+                    meResponse.ok &&
+                    meResult.success &&
+                    meResult.user
+                ) {
+
+                    setTimeout(
+                        function () {
+
+                            window.location.href =
+                                "../index.html";
+
+                        },
+                        800
+                    );
 
                 }
 
-                catch (error) {
-
-                    console.error(
-                        "Bejelentkezési hiba:",
-                        error
-                    );
-
+                else {
 
                     showError(
-                        error.message ||
-                        "Nem sikerült bejelentkezni."
+                        "A bejelentkezés sikerült, de a munkamenetet nem sikerült ellenőrizni."
                     );
-
-                }
-
-                finally {
-
-                    loginButton.disabled =
-                        false;
-
-
-                    loginButton.textContent =
-                        "Bejelentkezés";
-
                 }
 
             }
-        );
+
+            catch (error) {
+
+                console.error(
+                    "Bejelentkezési hiba:",
+                    error
+                );
 
 
-        // =========================================
-        // HIBA
-        // =========================================
+                showError(
+                    error.message ||
+                    "Nem sikerült bejelentkezni."
+                );
 
-        function showError(message) {
+            }
 
-            loginMessage.textContent =
-                message;
+            finally {
 
+                loginButton.disabled =
+                    false;
 
-            loginMessage.className =
-                "login-message error";
-
-        }
-
-
-        // =========================================
-        // SIKER
-        // =========================================
-
-        function showSuccess(message) {
-
-            loginMessage.textContent =
-                message;
-
-
-            loginMessage.className =
-                "login-message success";
+                loginButton.textContent =
+                    "Bejelentkezés";
+            }
 
         }
+    );
 
 
-        // =========================================
-        // ÜZENET TÖRLÉSE
-        // =========================================
+    // =========================================
+    // HIBA
+    // =========================================
 
-        function clearMessage() {
+    function showError(message) {
 
-            loginMessage.textContent =
-                "";
+        loginMessage.textContent =
+            message;
 
-
-            loginMessage.className =
-                "login-message";
-
-        }
-
-
+        loginMessage.className =
+            "login-message error";
     }
-);
-```
+
+
+    // =========================================
+    // SIKER
+    // =========================================
+
+    function showSuccess(message) {
+
+        loginMessage.textContent =
+            message;
+
+        loginMessage.className =
+            "login-message success";
+    }
+
+
+    // =========================================
+    // ÜZENET TÖRLÉSE
+    // =========================================
+
+    function clearMessage() {
+
+        loginMessage.textContent =
+            "";
+
+        loginMessage.className =
+            "login-message";
+    }
+
+});
