@@ -8,6 +8,8 @@ const express = require("express");
 
 const cors = require("cors");
 
+const { Pool } = require("pg");
+
 
 // =========================================
 // EXPRESS
@@ -50,6 +52,75 @@ const STEAM_ID =
 
 
 // =========================================
+// POSTGRESQL
+// =========================================
+
+const pool =
+    new Pool({
+
+        connectionString:
+            process.env.DATABASE_URL,
+
+        ssl: {
+            rejectUnauthorized: false
+        }
+
+    });
+
+
+// =========================================
+// ADATBÁZIS TESZT
+// =========================================
+
+async function initializeDatabase() {
+
+    try {
+
+        await pool.query(`
+            
+            CREATE TABLE IF NOT EXISTS users (
+
+                id SERIAL PRIMARY KEY,
+
+                username VARCHAR(50) NOT NULL UNIQUE,
+
+                email VARCHAR(255) NOT NULL UNIQUE,
+
+                password_hash TEXT NOT NULL,
+
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+            );
+
+        `);
+
+
+        console.log(
+            "PostgreSQL kapcsolat működik."
+        );
+
+
+        console.log(
+            "A users tábla készen áll."
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "PostgreSQL hiba:",
+            error
+        );
+
+    }
+
+}
+
+
+// =========================================
 // ALAP TESZT
 // =========================================
 
@@ -65,6 +136,59 @@ app.get(
                 "Project Hub backend működik!"
 
         });
+
+    }
+);
+
+
+// =========================================
+// ADATBÁZIS TESZT
+// =========================================
+
+app.get(
+    "/api/database/test",
+    async function (req, res) {
+
+        try {
+
+            const result =
+                await pool.query(
+                    "SELECT NOW() AS current_time"
+                );
+
+
+            res.json({
+
+                success: true,
+
+                message:
+                    "PostgreSQL kapcsolat működik.",
+
+                time:
+                    result.rows[0].current_time
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Adatbázis teszt hiba:",
+                error
+            );
+
+
+            res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült kapcsolódni az adatbázishoz."
+
+            });
+
+        }
 
     }
 );
@@ -137,7 +261,8 @@ app.get(
 
                 success: true,
 
-                data: data.response || {}
+                data:
+                    data.response || {}
 
             });
 
@@ -170,14 +295,24 @@ app.get(
 // SZERVER INDÍTÁSA
 // =========================================
 
-app.listen(
-    PORT,
-    "0.0.0.0",
-    function () {
+async function startServer() {
 
-        console.log(
-            `Project Hub backend fut a ${PORT} porton.`
-        );
+    await initializeDatabase();
 
-    }
-);
+
+    app.listen(
+        PORT,
+        "0.0.0.0",
+        function () {
+
+            console.log(
+                `Project Hub backend fut a ${PORT} porton.`
+            );
+
+        }
+    );
+
+}
+
+
+startServer();
