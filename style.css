@@ -465,3 +465,13 @@ main {
     transform: scale(0.92);
     background: #20242e;
 }
+
+.back-arrow {
+    width: 12px;
+    height: 12px;
+
+    border-left: 2px solid white;
+    border-bottom: 2px solid white;
+
+    transform: rotate(45deg);
+}
