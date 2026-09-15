@@ -2,7 +2,7 @@
    PROJECT HUB
    PAGES.CSS
 
-   Közös CSS a moduloldalakhoz:
+   Közös CSS:
    - Jegyzetek
    - Feladatok
    - Játékok
@@ -11,12 +11,13 @@
 
 
 /* =========================================
-   ALAP
-   Minden oldal használja
+   KÖZÖS ALAP
 ========================================= */
 
 .page-content {
+
     width: 100%;
+
     max-width: 700px;
 
     margin: 0 auto;
@@ -24,6 +25,8 @@
     padding: 20px 18px 60px;
 
     box-sizing: border-box;
+
+    min-width: 0;
 }
 
 
@@ -32,9 +35,11 @@
 ========================================= */
 
 .page-header {
+
     display: flex;
 
     align-items: center;
+
     justify-content: space-between;
 
     gap: 15px;
@@ -42,6 +47,8 @@
     width: 100%;
 
     box-sizing: border-box;
+
+    min-width: 0;
 }
 
 
@@ -50,12 +57,15 @@
 ========================================= */
 
 .back-button {
+
     width: 46px;
+
     height: 46px;
 
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     flex-shrink: 0;
@@ -82,6 +92,7 @@
 
 
 .back-button:hover {
+
     background: #1b1f28;
 
     border-color: #343946;
@@ -89,6 +100,7 @@
 
 
 .back-button:active {
+
     transform: scale(0.91);
 
     background: #20242e;
@@ -100,26 +112,29 @@
 ========================================= */
 
 .back-arrow {
+
     position: relative;
 
     width: 18px;
+
     height: 18px;
 
     display: block;
 }
 
 
-/* vízszintes szár */
-
 .back-arrow::after {
+
     content: "";
 
     position: absolute;
 
     width: 18px;
+
     height: 3px;
 
     left: 0;
+
     top: 7px;
 
     background: #ffffff;
@@ -128,17 +143,18 @@
 }
 
 
-/* nyílhegy */
-
 .back-arrow::before {
+
     content: "";
 
     position: absolute;
 
     width: 9px;
+
     height: 9px;
 
     left: 1px;
+
     top: 3px;
 
     border-left: 3px solid #ffffff;
@@ -156,11 +172,15 @@
 ========================================= */
 
 .page-intro {
+
     padding: 25px 5px 30px;
+
+    min-width: 0;
 }
 
 
 .page-intro .small-title {
+
     margin-bottom: 8px;
 
     color: #737987;
@@ -176,6 +196,7 @@
 
 
 .page-intro h2 {
+
     margin: 0 0 8px;
 
     color: #ffffff;
@@ -183,10 +204,13 @@
     font-size: 28px;
 
     line-height: 1.2;
+
+    overflow-wrap: anywhere;
 }
 
 
 .page-intro p {
+
     margin: 0;
 
     color: #858b99;
@@ -194,6 +218,8 @@
     font-size: 14px;
 
     line-height: 1.5;
+
+    overflow-wrap: anywhere;
 }
 
 
@@ -202,6 +228,7 @@
 ========================================= */
 
 .page-section {
+
     width: 100%;
 
     margin-top: 10px;
@@ -215,18 +242,22 @@
     border: 1px solid #222631;
 
     border-radius: 18px;
+
+    min-width: 0;
 }
 
 
 /* =========================================
    📝 JEGYZETEK
-   CSAK A JEGYZETEK OLDAL
 ========================================= */
 
 .notes-page {
+
     width: 100%;
 
     box-sizing: border-box;
+
+    min-width: 0;
 }
 
 
@@ -235,6 +266,7 @@
 ========================================= */
 
 .notes-editor {
+
     display: flex;
 
     flex-direction: column;
@@ -252,15 +284,14 @@
     border: 1px solid #222631;
 
     border-radius: 18px;
+
+    min-width: 0;
 }
 
 
-/* =========================================
-   JEGYZET INPUTOK
-========================================= */
-
 .notes-editor input,
 .notes-editor textarea {
+
     width: 100%;
 
     max-width: 100%;
@@ -295,23 +326,22 @@
 
 .notes-editor input::placeholder,
 .notes-editor textarea::placeholder {
+
     color: #626876;
 }
 
 
 .notes-editor input:focus,
 .notes-editor textarea:focus {
+
     border-color: #454b5a;
 
     background: #11141b;
 }
 
 
-/* =========================================
-   TEXTAREA
-========================================= */
-
 .notes-editor textarea {
+
     min-height: 150px;
 
     resize: vertical;
@@ -323,10 +353,11 @@
 
 
 /* =========================================
-   JEGYZET MENTÉS GOMB
+   JEGYZET MENTÉSE GOMB
 ========================================= */
 
 .save-note-button {
+
     width: 100%;
 
     padding: 14px;
@@ -354,25 +385,30 @@
 
 
 .save-note-button:hover {
+
     background: #2c323e;
 }
 
 
 .save-note-button:active {
+
     transform: scale(0.98);
 }
 
 
 /* =========================================
-   JEGYZET SZEKCIÓ
+   JEGYZETEK SZEKCIÓ
 ========================================= */
 
 .notes-section {
+
     width: 100%;
 
     margin-top: 22px;
 
     box-sizing: border-box;
+
+    min-width: 0;
 }
 
 
@@ -381,18 +417,23 @@
 ========================================= */
 
 .section-header {
+
     display: flex;
 
     align-items: center;
+
     justify-content: space-between;
 
     gap: 10px;
 
     margin-bottom: 12px;
+
+    min-width: 0;
 }
 
 
 .section-header h2 {
+
     margin: 0;
 
     color: #ffffff;
@@ -400,10 +441,13 @@
     font-size: 18px;
 
     line-height: 1.3;
+
+    overflow-wrap: anywhere;
 }
 
 
 .section-header span {
+
     flex-shrink: 0;
 
     color: #737987;
@@ -417,6 +461,7 @@
 ========================================= */
 
 .notes-list {
+
     display: flex;
 
     flex-direction: column;
@@ -424,6 +469,8 @@
     gap: 12px;
 
     width: 100%;
+
+    min-width: 0;
 }
 
 
@@ -432,8 +479,11 @@
 ========================================= */
 
 .note-card {
+
     width: 100%;
+
     max-width: 100%;
+
     min-width: 0;
 
     padding: 18px;
@@ -443,10 +493,32 @@
     background: #151820;
 
     border: 1px solid #222631;
+
     border-radius: 16px;
 
     overflow: hidden;
-} 
+
+    cursor: pointer;
+
+    transition:
+        border-color 0.2s ease,
+        transform 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.note-card:hover {
+
+    border-color: #303541;
+
+    background: #181b24;
+}
+
+
+.note-card:active {
+
+    transform: scale(0.99);
+}
 
 
 /* =========================================
@@ -454,9 +526,11 @@
 ========================================= */
 
 .note-card-header {
+
     display: flex;
 
     align-items: flex-start;
+
     justify-content: space-between;
 
     gap: 10px;
@@ -464,13 +538,18 @@
     width: 100%;
 
     min-width: 0;
+
+    box-sizing: border-box;
 }
 
 
 .note-card-header h3 {
+
     flex: 1;
 
     min-width: 0;
+
+    max-width: 100%;
 
     margin: 0;
 
@@ -491,6 +570,7 @@
 ========================================= */
 
 .note-buttons {
+
     display: flex;
 
     align-items: center;
@@ -503,12 +583,15 @@
 
 .edit-note,
 .delete-note {
+
     width: 36px;
+
     height: 36px;
 
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     flex-shrink: 0;
@@ -531,23 +614,30 @@
 
 .edit-note:hover,
 .delete-note:hover {
+
     background: #292e3a;
 }
 
 
 .edit-note:active,
 .delete-note:active {
+
     transform: scale(0.9);
 }
 
 
 /* =========================================
-   JEGYZET SZÖVEGE
+   JEGYZET RÖVID SZÖVEGE
 ========================================= */
 
 .note-card-text {
+
+    display: block;
+
     width: 100%;
+
     max-width: 100%;
+
     min-width: 0;
 
     margin: 12px 0;
@@ -557,24 +647,30 @@
     color: #b4b8c2;
 
     font-size: 14px;
+
     line-height: 1.6;
 
     white-space: pre-wrap;
 
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: anywhere !important;
+
+    word-break: break-word !important;
 
     overflow: hidden;
 }
 
+
 /* =========================================
-   JEGYZET DÁTUM
+   DÁTUM
 ========================================= */
 
 .note-date {
+
     display: block;
 
     width: 100%;
+
+    max-width: 100%;
 
     color: #656b78;
 
@@ -583,14 +679,17 @@
     line-height: 1.4;
 
     overflow-wrap: anywhere;
+
+    word-break: break-word;
 }
 
 
 /* =========================================
-   ÜRES JEGYZET ÁLLAPOT
+   ÜRES JEGYZETEK
 ========================================= */
 
 .empty-notes {
+
     padding: 35px 20px;
 
     text-align: center;
@@ -600,6 +699,7 @@
 
 
 .empty-icon {
+
     margin-bottom: 10px;
 
     font-size: 35px;
@@ -607,6 +707,7 @@
 
 
 .empty-notes h3 {
+
     margin: 0 0 6px;
 
     color: #ffffff;
@@ -616,6 +717,7 @@
 
 
 .empty-notes p {
+
     margin: 0;
 
     color: #737987;
@@ -627,78 +729,294 @@
 
 
 /* =========================================
-   ✅ FELADATOK
-   CSAK A FELADATOK OLDAL
+   📝 TELJES JEGYZET MODAL
 ========================================= */
 
-.tasks-page {
-    width: 100%;
+.note-modal {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    display: none;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 20px;
 
     box-sizing: border-box;
 }
 
 
-/*
-   Ide kerülnek majd a Feladatok
-   saját elemei.
+.note-modal.open {
 
-   Például:
+    display: flex;
+}
 
-   .task-card
-   .task-list
-   .task-checkbox
-   .task-filter
-*/
+
+/* =========================================
+   MODAL HÁTTÉR
+========================================= */
+
+.note-modal-overlay {
+
+    position: absolute;
+
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.75);
+
+    backdrop-filter: blur(5px);
+
+    -webkit-backdrop-filter: blur(5px);
+}
+
+
+/* =========================================
+   MODAL KÁRTYA
+========================================= */
+
+.note-modal-card {
+
+    position: relative;
+
+    z-index: 1;
+
+    width: 100%;
+
+    max-width: 650px;
+
+    max-height: 85vh;
+
+    display: flex;
+
+    flex-direction: column;
+
+    box-sizing: border-box;
+
+    padding: 22px;
+
+    background: #151820;
+
+    border: 1px solid #292d38;
+
+    border-radius: 20px;
+
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.45);
+
+    overflow: hidden;
+
+    min-width: 0;
+}
+
+
+/* =========================================
+   MODAL FEJLÉC
+========================================= */
+
+.note-modal-header {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    width: 100%;
+
+    min-width: 0;
+
+    padding-bottom: 15px;
+
+    border-bottom: 1px solid #252934;
+}
+
+
+.note-modal-header h2 {
+
+    flex: 1;
+
+    min-width: 0;
+
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: 21px;
+
+    line-height: 1.35;
+
+    overflow-wrap: anywhere;
+
+    word-break: break-word;
+}
+
+
+/* =========================================
+   MODAL BEZÁRÁS
+========================================= */
+
+.close-note-modal {
+
+    width: 38px;
+
+    height: 38px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    padding: 0;
+
+    border: 1px solid #292d38;
+
+    border-radius: 10px;
+
+    background: #20242e;
+
+    color: #ffffff;
+
+    font-size: 16px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        transform 0.15s ease;
+}
+
+
+.close-note-modal:hover {
+
+    background: #2b303c;
+}
+
+
+.close-note-modal:active {
+
+    transform: scale(0.9);
+}
+
+
+/* =========================================
+   TELJES JEGYZET SZÖVEGE
+========================================= */
+
+.note-modal-text {
+
+    width: 100%;
+
+    max-width: 100%;
+
+    min-width: 0;
+
+    margin-top: 18px;
+
+    padding-right: 5px;
+
+    box-sizing: border-box;
+
+    color: #c2c6cf;
+
+    font-size: 15px;
+
+    line-height: 1.7;
+
+    white-space: pre-wrap;
+
+    overflow-wrap: anywhere;
+
+    word-break: break-word;
+
+    overflow-y: auto;
+
+    overflow-x: hidden;
+
+    flex: 1;
+}
+
+
+/* =========================================
+   MODAL DÁTUM
+========================================= */
+
+.note-modal-date {
+
+    margin-top: 18px;
+
+    padding-top: 13px;
+
+    border-top: 1px solid #252934;
+
+    color: #656b78;
+
+    font-size: 11px;
+
+    line-height: 1.4;
+}
+
+
+/* =========================================
+   OLDAL SCROLL LEZÁRÁSA MODALNÁL
+========================================= */
+
+body.note-modal-open {
+
+    overflow: hidden;
+}
+
+
+/* =========================================
+   ✅ FELADATOK
+========================================= */
+
+.tasks-page {
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    min-width: 0;
+}
 
 
 /* =========================================
    🎮 JÁTÉKOK
-   CSAK A JÁTÉKOK OLDAL
 ========================================= */
 
 .games-page {
+
     width: 100%;
 
     box-sizing: border-box;
+
+    min-width: 0;
 }
-
-
-/*
-   Ide kerülnek majd a Játékok
-   saját elemei.
-
-   Például:
-
-   .game-card
-   .game-cover
-   .game-status
-   .game-rating
-*/
 
 
 /* =========================================
    📍 HELYEK
-   CSAK A HELYEK OLDAL
 ========================================= */
 
 .places-page {
+
     width: 100%;
 
     box-sizing: border-box;
+
+    min-width: 0;
 }
-
-
-/*
-   Ide kerülnek majd a Helyek
-   saját elemei.
-
-   Például:
-
-   .place-card
-   .place-image
-   .place-location
-   .place-status
-*/
 
 
 /* =========================================
@@ -707,7 +1025,9 @@
 
 @media (max-width: 500px) {
 
+
     .page-content {
+
         padding-top: 16px;
 
         padding-left: 14px;
@@ -719,6 +1039,7 @@
 
 
     .page-intro {
+
         padding-top: 20px;
 
         padding-left: 3px;
@@ -730,32 +1051,72 @@
 
 
     .page-intro h2 {
+
         font-size: 25px;
     }
 
 
     .page-section {
+
         padding: 15px;
     }
 
 
     .notes-editor {
+
         padding: 15px;
     }
 
 
     .note-card {
+
         padding: 15px;
     }
 
 
     .note-card-header h3 {
+
         font-size: 16px;
     }
 
 
     .section-header h2 {
+
         font-size: 17px;
+    }
+
+
+    /* =====================================
+       MODAL MOBIL
+    ===================================== */
+
+    .note-modal {
+
+        padding: 12px;
+    }
+
+
+    .note-modal-card {
+
+        max-height: 90vh;
+
+        padding: 17px;
+
+        border-radius: 17px;
+    }
+
+
+    .note-modal-header h2 {
+
+        font-size: 18px;
+    }
+
+
+    .note-modal-text {
+
+        font-size: 14px;
+
+        line-height: 1.65;
     }
 
 }
@@ -768,6 +1129,7 @@
 @media (min-width: 700px) {
 
     .page-content {
+
         padding-left: 18px;
 
         padding-right: 18px;
@@ -781,16 +1143,19 @@
 ========================================= */
 
 ::-webkit-scrollbar {
+
     width: 7px;
 }
 
 
 ::-webkit-scrollbar-track {
+
     background: #0b0d12;
 }
 
 
 ::-webkit-scrollbar-thumb {
+
     background: #292d38;
 
     border-radius: 10px;
@@ -798,5 +1163,6 @@
 
 
 ::-webkit-scrollbar-thumb:hover {
+
     background: #383e4b;
 }
