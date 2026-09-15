@@ -501,13 +501,50 @@ main {
 }
 
 .back-arrow {
-    width: 15px;
-    height: 15px;
+    position: relative;
+
+    width: 18px;
+    height: 18px;
+
+    display: block;
+}
+
+/* vízszintes szár */
+
+.back-arrow::after {
+    content: "";
+
+    position: absolute;
+
+    width: 18px;
+    height: 3px;
+
+    background: #ffffff;
+
+    left: 0;
+    top: 7px;
+
+    border-radius: 2px;
+}
+
+
+/* nyílhegy */
+
+.back-arrow::before {
+    content: "";
+
+    position: absolute;
+
+    width: 9px;
+    height: 9px;
 
     border-left: 3px solid #ffffff;
     border-bottom: 3px solid #ffffff;
 
+    left: 1px;
+    top: 3px;
+
     transform: rotate(45deg);
 
-    display: block;
+    border-radius: 1px;
 }
