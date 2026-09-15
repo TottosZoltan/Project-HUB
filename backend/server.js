@@ -3658,10 +3658,10 @@ function getSteamImageUrls(appId) {
 
 }
 
-
 // ======================================================
 // STEAM LINK - INDÍTÁS
 // ======================================================
+
 app.get(
     "/api/steam/link",
     async function (req, res) {
@@ -3702,6 +3702,10 @@ app.get(
             }
 
 
+            // --------------------------------------------------
+            // Biztonsági state létrehozása
+            // --------------------------------------------------
+
             const state =
                 createSteamLinkState();
 
@@ -3721,8 +3725,10 @@ app.get(
                 );
 
 
-            // Régi, ehhez a felhasználóhoz tartozó
-            // Steam összekötési állapot törlése
+            // --------------------------------------------------
+            // Korábbi state törlése
+            // --------------------------------------------------
+
             await pool.query(
                 `
                 DELETE FROM steam_link_states
@@ -3735,7 +3741,10 @@ app.get(
             );
 
 
-            // Új biztonsági állapot mentése
+            // --------------------------------------------------
+            // Új state mentése
+            // --------------------------------------------------
+
             await pool.query(
                 `
                 INSERT INTO steam_link_states (
@@ -3758,10 +3767,18 @@ app.get(
             );
 
 
+            // --------------------------------------------------
+            // Steam OpenID callback URL
+            // --------------------------------------------------
+
             const returnTo =
                 BACKEND_URL +
                 "/api/steam/callback";
 
+
+            // --------------------------------------------------
+            // Steam OpenID URL
+            // --------------------------------------------------
 
             const steamOpenIdUrl =
                 "https://steamcommunity.com/openid/login?" +
@@ -3791,6 +3808,10 @@ app.get(
 
                 }).toString();
 
+
+            // --------------------------------------------------
+            // URL visszaadása a frontendnek
+            // --------------------------------------------------
 
             return res.json({
 
@@ -3824,14 +3845,13 @@ app.get(
     }
 );
 
+
 // ======================================================
 // STEAM LINK - CALLBACK
 // ======================================================
 //
-// A Steam OpenID után ide érkezünk vissza.
-// A state alapján kötjük össze a Steam fiókot
-// a megfelelő Project Hub userrel.
-//
+// Steam OpenID után ide érkezünk vissza.
+// A state alapján azonosítjuk a Project Hub usert.
 // ======================================================
 
 app.get(
@@ -3840,9 +3860,12 @@ app.get(
 
         try {
 
+            // --------------------------------------------------
+            // 1. State kiolvasása
+            // --------------------------------------------------
+
             const state =
-                typeof req.query.state ===
-                "string"
+                typeof req.query.state === "string"
                     ? req.query.state
                     : "";
 
@@ -3857,18 +3880,28 @@ app.get(
             }
 
 
+            // --------------------------------------------------
+            // 2. State hash
+            // --------------------------------------------------
+
             const stateHash =
-                hashAuthToken(
+                hashSteamLinkState(
                     state
                 );
 
+
+            // --------------------------------------------------
+            // 3. State megkeresése
+            // --------------------------------------------------
 
             const stateResult =
                 await pool.query(
                     `
                     SELECT
                         id,
-                        user_id
+                        user_id,
+                        state_hash,
+                        expires_at
 
                     FROM steam_link_states
 
@@ -3902,11 +3935,81 @@ app.get(
                 stateResult.rows[0];
 
 
-            // ==================================================
-            // STEAM OPENID VERIFY
-            // ==================================================
+            const userId =
+                linkState.user_id;
 
-            const verifyParams = {};
+
+            // --------------------------------------------------
+            // 4. Steam OpenID mód ellenőrzése
+            // --------------------------------------------------
+
+            if (
+                req.query["openid.mode"] !==
+                "id_res"
+            ) {
+
+                await pool.query(
+                    `
+                    DELETE FROM steam_link_states
+
+                    WHERE id = $1
+                    `,
+                    [
+                        linkState.id
+                    ]
+                );
+
+
+                return res.redirect(
+                    FRONTEND_URL +
+                    "/?steam_link=error&reason=openid_failed"
+                );
+
+            }
+
+
+            // --------------------------------------------------
+            // 5. Steam claimed ID
+            // --------------------------------------------------
+
+            const claimedId =
+                typeof req.query[
+                    "openid.claimed_id"
+                ] === "string"
+                    ? req.query[
+                        "openid.claimed_id"
+                    ]
+                    : "";
+
+
+            if (!claimedId) {
+
+                await pool.query(
+                    `
+                    DELETE FROM steam_link_states
+
+                    WHERE id = $1
+                    `,
+                    [
+                        linkState.id
+                    ]
+                );
+
+
+                return res.redirect(
+                    FRONTEND_URL +
+                    "/?steam_link=error&reason=missing_steam_id"
+                );
+
+            }
+
+
+            // --------------------------------------------------
+            // 6. Steam OpenID válasz összegyűjtése
+            // --------------------------------------------------
+
+            const verifyParams =
+                new URLSearchParams();
 
 
             for (
@@ -3922,21 +4025,43 @@ app.get(
                     )
                 ) {
 
-                    verifyParams[key] =
+                    const cleanValue =
                         Array.isArray(value)
                             ? value[0]
                             : value;
+
+
+                    if (
+                        cleanValue !==
+                        undefined &&
+                        cleanValue !==
+                        null
+                    ) {
+
+                        verifyParams.set(
+                            key,
+                            String(
+                                cleanValue
+                            )
+                        );
+
+                    }
 
                 }
 
             }
 
 
-            verifyParams[
-                "openid.mode"
-            ] =
-                "check_authentication";
+            // Steam szervernek ezt kell küldenünk
+            verifyParams.set(
+                "openid.mode",
+                "check_authentication"
+            );
 
+
+            // --------------------------------------------------
+            // 7. Steam OpenID ellenőrzése
+            // --------------------------------------------------
 
             const verifyResponse =
                 await fetch(
@@ -3945,23 +4070,27 @@ app.get(
                         method: "POST",
 
                         headers: {
+
                             "Content-Type":
                                 "application/x-www-form-urlencoded"
+
                         },
 
                         body:
-                            new URLSearchParams(
-                                verifyParams
-                            ).toString()
+                            verifyParams.toString()
+
                     }
                 );
 
 
-            if (!verifyResponse.ok) {
+            if (
+                !verifyResponse.ok
+            ) {
 
                 await pool.query(
                     `
                     DELETE FROM steam_link_states
+
                     WHERE id = $1
                     `,
                     [
@@ -3991,6 +4120,7 @@ app.get(
                 await pool.query(
                     `
                     DELETE FROM steam_link_states
+
                     WHERE id = $1
                     `,
                     [
@@ -4007,15 +4137,9 @@ app.get(
             }
 
 
-            const claimedId =
-                typeof req.query[
-                    "openid.claimed_id"
-                ] === "string"
-                    ? req.query[
-                        "openid.claimed_id"
-                    ]
-                    : "";
-
+            // --------------------------------------------------
+            // 8. SteamID64 kinyerése
+            // --------------------------------------------------
 
             const steamIdMatch =
                 claimedId.match(
@@ -4030,6 +4154,7 @@ app.get(
                 await pool.query(
                     `
                     DELETE FROM steam_link_states
+
                     WHERE id = $1
                     `,
                     [
@@ -4050,10 +4175,9 @@ app.get(
                 steamIdMatch[1];
 
 
-            // ==================================================
-            // ELLENŐRIZZÜK, HOGY EZ A STEAM FIÓK
-            // NINCS-E MÁSIK PROJECT HUB USERHEZ KAPCSOLVA
-            // ==================================================
+            // --------------------------------------------------
+            // 9. Ellenőrizzük, hogy nincs-e más userhez kötve
+            // --------------------------------------------------
 
             const existingSteamAccount =
                 await pool.query(
@@ -4072,18 +4196,20 @@ app.get(
                     `,
                     [
                         steamId,
-                        linkState.user_id
+                        userId
                     ]
                 );
 
 
             if (
-                existingSteamAccount.rows.length > 0
+                existingSteamAccount.rows.length >
+                0
             ) {
 
                 await pool.query(
                     `
                     DELETE FROM steam_link_states
+
                     WHERE id = $1
                     `,
                     [
@@ -4100,33 +4226,20 @@ app.get(
             }
 
 
-            // ==================================================
-            // STEAM PROFIL LEKÉRÉSE
-            // ==================================================
+            // --------------------------------------------------
+            // 10. Steam profil lekérése
+            // --------------------------------------------------
 
-            let steamProfile = null;
+            let steamProfile =
+                null;
 
 
             try {
 
-                const profileData =
-                    await steamApiGet(
-                        "ISteamUser",
-                        "GetPlayerSummaries",
-                        "v0002",
-                        {
-                            steamids:
-                                steamId
-                        }
-                    );
-
-
                 steamProfile =
-                    profileData
-                        ?.response
-                        ?.players
-                        ?.[0] ||
-                    null;
+                    await getSteamPlayerSummary(
+                        steamId
+                    );
 
             }
             catch (
@@ -4141,9 +4254,33 @@ app.get(
             }
 
 
-            // ==================================================
-            // STEAM ACCOUNT MENTÉS
-            // ==================================================
+            // --------------------------------------------------
+            // 11. Steam profil adatok
+            // --------------------------------------------------
+
+            const steamName =
+                steamProfile?.personaname ||
+                null;
+
+
+            const avatar =
+                steamProfile?.avatarfull ||
+                steamProfile?.avatarmedium ||
+                steamProfile?.avatar ||
+                null;
+
+
+            const profileUrl =
+                steamProfile?.profileurl ||
+                (
+                    "https://steamcommunity.com/profiles/" +
+                    steamId
+                );
+
+
+            // --------------------------------------------------
+            // 12. Steam account mentése
+            // --------------------------------------------------
 
             await pool.query(
                 `
@@ -4153,6 +4290,7 @@ app.get(
                     steam_name,
                     avatar,
                     profile_url,
+                    created_at,
                     updated_at
                 )
 
@@ -4162,6 +4300,7 @@ app.get(
                     $3,
                     $4,
                     $5,
+                    CURRENT_TIMESTAMP,
                     CURRENT_TIMESTAMP
                 )
 
@@ -4185,31 +4324,18 @@ app.get(
                         CURRENT_TIMESTAMP
                 `,
                 [
-                    linkState.user_id,
-
+                    userId,
                     steamId,
-
-                    steamProfile
-                        ?.personaname ||
-                        null,
-
-                    steamProfile
-                        ?.avatarfull ||
-                        null,
-
-                    steamProfile
-                        ?.profileurl ||
-                        (
-                            "https://steamcommunity.com/profiles/" +
-                            steamId
-                        )
+                    steamName,
+                    avatar,
+                    profileUrl
                 ]
             );
 
 
-            // ==================================================
-            // STATE FELHASZNÁLVA
-            // ==================================================
+            // --------------------------------------------------
+            // 13. State törlése
+            // --------------------------------------------------
 
             await pool.query(
                 `
@@ -4222,6 +4348,10 @@ app.get(
                 ]
             );
 
+
+            // --------------------------------------------------
+            // 14. Vissza a Project Hub frontendhez
+            // --------------------------------------------------
 
             return res.redirect(
                 FRONTEND_URL +
@@ -4483,6 +4613,7 @@ app.get(
                     "GetOwnedGames",
                     "v0001",
                     {
+
                         steamid:
                             account.steam_id,
 
@@ -4491,6 +4622,7 @@ app.get(
 
                         include_played_free_games:
                             1
+
                     }
                 );
 
@@ -4709,9 +4841,9 @@ app.get(
             }
 
 
-            // ==================================================
-            // JÁTÉKLISTÁBÓL KERESSÜK KI
-            // ==================================================
+            // --------------------------------------------------
+            // Játék ellenőrzése a saját Steam könyvtárban
+            // --------------------------------------------------
 
             const ownedGamesData =
                 await steamApiGet(
@@ -4719,6 +4851,7 @@ app.get(
                     "GetOwnedGames",
                     "v0001",
                     {
+
                         steamid:
                             account.steam_id,
 
@@ -4727,6 +4860,7 @@ app.get(
 
                         include_played_free_games:
                             1
+
                     }
                 );
 
@@ -4772,13 +4906,9 @@ app.get(
                 );
 
 
-            // ==================================================
-            // ACHIEVEMENTEK
-            // ==================================================
-
-            let achievementData =
-                null;
-
+            // --------------------------------------------------
+            // Achievementek
+            // --------------------------------------------------
 
             let achievements = [];
 
@@ -4799,12 +4929,13 @@ app.get(
 
             try {
 
-                achievementData =
+                const achievementData =
                     await steamApiGet(
                         "ISteamUserStats",
                         "GetPlayerAchievements",
                         "v0001",
                         {
+
                             steamid:
                                 account.steam_id,
 
@@ -4813,6 +4944,7 @@ app.get(
 
                             l:
                                 "english"
+
                         }
                     );
 
@@ -5037,8 +5169,10 @@ app.get(
                     "GetPlayerSummaries",
                     "v0002",
                     {
+
                         steamids:
                             account.steam_id
+
                     }
                 );
 
@@ -5187,8 +5321,10 @@ app.get(
                     "GetRecentlyPlayedGames",
                     "v0001",
                     {
+
                         steamid:
                             account.steam_id
+
                     }
                 );
 
@@ -5274,6 +5410,7 @@ app.get(
 
     }
 );
+
 // ======================================================
 // GLOBAL ERROR HANDLER
 // ======================================================
