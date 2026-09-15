@@ -3662,7 +3662,6 @@ function getSteamImageUrls(appId) {
 // ======================================================
 // STEAM LINK - INDÍTÁS
 // ======================================================
-
 app.get(
     "/api/steam/link",
     async function (req, res) {
@@ -3704,13 +3703,11 @@ app.get(
 
 
             const state =
-                crypto
-                    .randomBytes(32)
-                    .toString("hex");
+                createSteamLinkState();
 
 
             const stateHash =
-                hashAuthToken(
+                hashSteamLinkState(
                     state
                 );
 
@@ -3724,6 +3721,8 @@ app.get(
                 );
 
 
+            // Régi, ehhez a felhasználóhoz tartozó
+            // Steam összekötési állapot törlése
             await pool.query(
                 `
                 DELETE FROM steam_link_states
@@ -3736,6 +3735,7 @@ app.get(
             );
 
 
+            // Új biztonsági állapot mentése
             await pool.query(
                 `
                 INSERT INTO steam_link_states (
@@ -3796,7 +3796,7 @@ app.get(
 
                 success: true,
 
-                redirectUrl:
+                url:
                     steamOpenIdUrl
 
             });
@@ -3823,7 +3823,6 @@ app.get(
 
     }
 );
-
 
 // ======================================================
 // STEAM LINK - CALLBACK
