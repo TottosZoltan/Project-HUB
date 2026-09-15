@@ -324,6 +324,163 @@ app.post(
 );
 
 // =========================================
+// BEJELENTKEZÉS
+// =========================================
+
+app.post(
+    "/api/auth/login",
+    async function (req, res) {
+
+        try {
+
+            const {
+                email,
+                password
+            } = req.body;
+
+
+            // =========================================
+            // ELLENŐRZÉS
+            // =========================================
+
+            if (
+                !email ||
+                !password
+            ) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "Az e-mail és a jelszó megadása kötelező."
+
+                });
+
+            }
+
+
+            // =========================================
+            // FELHASZNÁLÓ KERESÉSE
+            // =========================================
+
+            const result =
+                await pool.query(
+
+                    `
+                    SELECT
+                        id,
+                        username,
+                        email,
+                        password_hash
+                    FROM users
+                    WHERE email = $1
+                    LIMIT 1
+                    `,
+
+                    [
+                        email.trim().toLowerCase()
+                    ]
+
+                );
+
+
+            if (
+                result.rows.length === 0
+            ) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Hibás e-mail vagy jelszó."
+
+                });
+
+            }
+
+
+            const user =
+                result.rows[0];
+
+
+            // =========================================
+            // JELSZÓ ELLENŐRZÉSE
+            // =========================================
+
+            const passwordMatches =
+                await bcrypt.compare(
+                    password,
+                    user.password_hash
+                );
+
+
+            if (!passwordMatches) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Hibás e-mail vagy jelszó."
+
+                });
+
+            }
+
+
+            // =========================================
+            // SIKERES BEJELENTKEZÉS
+            // =========================================
+
+            res.json({
+
+                success: true,
+
+                message:
+                    "Sikeres bejelentkezés.",
+
+                user: {
+
+                    id:
+                        user.id,
+
+                    username:
+                        user.username,
+
+                    email:
+                        user.email
+
+                }
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Bejelentkezési hiba:",
+                error
+            );
+
+
+            res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült bejelentkezni."
+
+            });
+
+        }
+
+    }
+);
+
+// =========================================
 // ADATBÁZIS TESZT
 // =========================================
 
