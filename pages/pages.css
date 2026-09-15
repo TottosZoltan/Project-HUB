@@ -433,9 +433,7 @@
 
 .note-card {
     width: 100%;
-
     max-width: 100%;
-
     min-width: 0;
 
     padding: 18px;
@@ -445,20 +443,10 @@
     background: #151820;
 
     border: 1px solid #222631;
-
     border-radius: 16px;
 
     overflow: hidden;
-
-    transition:
-        border-color 0.2s ease,
-        transform 0.2s ease;
-}
-
-
-.note-card:hover {
-    border-color: #303541;
-}
+} 
 
 
 /* =========================================
@@ -559,8 +547,8 @@
 
 .note-card-text {
     width: 100%;
-
     max-width: 100%;
+    min-width: 0;
 
     margin: 12px 0;
 
@@ -569,18 +557,15 @@
     color: #b4b8c2;
 
     font-size: 14px;
-
     line-height: 1.6;
 
     white-space: pre-wrap;
 
     overflow-wrap: anywhere;
-
     word-break: break-word;
 
     overflow: hidden;
 }
-
 
 /* =========================================
    JEGYZET DÁTUM
