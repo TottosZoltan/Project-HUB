@@ -495,36 +495,44 @@ app.post(
             // SESSION LÉTREHOZÁSA
             // =========================================
 
-            req.session.userId =
+                        req.session.userId =
                 user.id;
-
 
             req.session.username =
                 user.username;
 
+            req.session.save(
+                function (sessionError) {
 
-            res.json({
+                    if (sessionError) {
 
-                success: true,
+                        console.error(
+                            "Session mentési hiba:",
+                            sessionError
+                        );
 
-                message:
-                    "Sikeres bejelentkezés.",
+                        return res.status(500).json({
+                            success: false,
+                            message:
+                                "A bejelentkezési munkamenetet nem sikerült elmenteni."
+                        });
+                    }
 
-                user: {
-
-                    id:
-                        user.id,
-
-                    username:
-                        user.username,
-
-                    email:
-                        user.email
-
+                    res.json({
+                        success: true,
+                        message:
+                            "Sikeres bejelentkezés.",
+                        user: {
+                            id:
+                                user.id,
+                            username:
+                                user.username,
+                            email:
+                                user.email
+                        }
+                    });
                 }
-
-            });
-
+            );
         }
 
         catch (error) {
