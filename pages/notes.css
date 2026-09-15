@@ -1,1 +1,801 @@
+/* =========================================
+   PROJECT HUB
+   NOTES.CSS
 
+   📝 JEGYZETEK MODUL
+========================================= */
+
+
+/* =========================================
+   JEGYZETEK OLDAL
+========================================= */
+
+.notes-page {
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    min-width: 0;
+}
+
+
+/* =========================================
+   ÚJ JEGYZET SZERKESZTŐ
+========================================= */
+
+.notes-editor {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    width: 100%;
+
+    padding: 20px;
+
+    box-sizing: border-box;
+
+    background: #151820;
+
+    border: 1px solid #222631;
+
+    border-radius: 18px;
+
+    min-width: 0;
+}
+
+
+/* =========================================
+   INPUT + TEXTAREA
+========================================= */
+
+.notes-editor input,
+.notes-editor textarea {
+
+    width: 100%;
+
+    max-width: 100%;
+
+    min-width: 0;
+
+    padding: 14px;
+
+    box-sizing: border-box;
+
+    border: 1px solid #292d38;
+
+    border-radius: 12px;
+
+    outline: none;
+
+    background: #0f1117;
+
+    color: #ffffff;
+
+    font-family: Arial, sans-serif;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.notes-editor input::placeholder,
+.notes-editor textarea::placeholder {
+
+    color: #626876;
+}
+
+
+.notes-editor input:focus,
+.notes-editor textarea:focus {
+
+    border-color: #454b5a;
+
+    background: #11141b;
+}
+
+
+.notes-editor textarea {
+
+    min-height: 150px;
+
+    resize: vertical;
+
+    overflow-wrap: break-word;
+
+    word-break: break-word;
+}
+
+
+/* =========================================
+   JEGYZET MENTÉSE GOMB
+========================================= */
+
+.save-note-button {
+
+    width: 100%;
+
+    padding: 14px;
+
+    box-sizing: border-box;
+
+    border: 1px solid #343946;
+
+    border-radius: 12px;
+
+    background: #252a35;
+
+    color: #ffffff;
+
+    font-size: 14px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.15s ease,
+        background 0.15s ease;
+}
+
+
+.save-note-button:hover {
+
+    background: #2c323e;
+}
+
+
+.save-note-button:active {
+
+    transform: scale(0.98);
+}
+
+
+/* =========================================
+   MENTETT JEGYZETEK
+========================================= */
+
+.notes-section {
+
+    width: 100%;
+
+    margin-top: 22px;
+
+    box-sizing: border-box;
+
+    min-width: 0;
+}
+
+
+/* =========================================
+   SZEKCIÓ FEJLÉC
+========================================= */
+
+.section-header {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 10px;
+
+    margin-bottom: 12px;
+
+    min-width: 0;
+}
+
+
+.section-header h2 {
+
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: 18px;
+
+    line-height: 1.3;
+
+    overflow-wrap: anywhere;
+}
+
+
+.section-header span {
+
+    flex-shrink: 0;
+
+    color: #737987;
+
+    font-size: 13px;
+}
+
+
+/* =========================================
+   JEGYZET LISTA
+========================================= */
+
+.notes-list {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    width: 100%;
+
+    min-width: 0;
+}
+
+
+/* =========================================
+   JEGYZET KÁRTYA
+========================================= */
+
+.note-card {
+
+    width: 100%;
+
+    max-width: 100%;
+
+    min-width: 0;
+
+    padding: 18px;
+
+    box-sizing: border-box;
+
+    background: #151820;
+
+    border: 1px solid #222631;
+
+    border-radius: 16px;
+
+    overflow: hidden;
+
+    cursor: pointer;
+
+    transition:
+        border-color 0.2s ease,
+        transform 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.note-card:hover {
+
+    border-color: #303541;
+
+    background: #181b24;
+}
+
+
+.note-card:active {
+
+    transform: scale(0.99);
+}
+
+
+/* =========================================
+   JEGYZET FEJLÉC
+========================================= */
+
+.note-card-header {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 10px;
+
+    width: 100%;
+
+    min-width: 0;
+
+    box-sizing: border-box;
+}
+
+
+.note-card-header h3 {
+
+    flex: 1;
+
+    min-width: 0;
+
+    max-width: 100%;
+
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: 17px;
+
+    line-height: 1.4;
+
+    overflow-wrap: anywhere;
+
+    word-break: break-word;
+}
+
+
+/* =========================================
+   JEGYZET GOMBOK
+========================================= */
+
+.note-buttons {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    flex-shrink: 0;
+}
+
+
+.edit-note,
+.delete-note {
+
+    width: 36px;
+    height: 36px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    padding: 0;
+
+    border: 1px solid #292d38;
+
+    border-radius: 10px;
+
+    background: #20242e;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.15s ease,
+        background 0.15s ease;
+}
+
+
+.edit-note:hover,
+.delete-note:hover {
+
+    background: #292e3a;
+}
+
+
+.edit-note:active,
+.delete-note:active {
+
+    transform: scale(0.9);
+}
+
+
+/* =========================================
+   JEGYZET RÖVID ELŐNÉZET
+========================================= */
+
+.note-card-text {
+
+    display: block;
+
+    width: 100%;
+
+    max-width: 100%;
+
+    min-width: 0;
+
+    margin: 12px 0;
+
+    box-sizing: border-box;
+
+    color: #b4b8c2;
+
+    font-size: 14px;
+
+    line-height: 1.6;
+
+    white-space: pre-wrap;
+
+    overflow-wrap: anywhere !important;
+
+    word-break: break-word !important;
+
+    overflow: hidden;
+}
+
+
+/* =========================================
+   DÁTUM
+========================================= */
+
+.note-date {
+
+    display: block;
+
+    width: 100%;
+
+    max-width: 100%;
+
+    color: #656b78;
+
+    font-size: 11px;
+
+    line-height: 1.4;
+
+    overflow-wrap: anywhere;
+
+    word-break: break-word;
+}
+
+
+/* =========================================
+   ÜRES JEGYZETEK
+========================================= */
+
+.empty-notes {
+
+    padding: 35px 20px;
+
+    text-align: center;
+
+    color: #737987;
+}
+
+
+.empty-icon {
+
+    margin-bottom: 10px;
+
+    font-size: 35px;
+}
+
+
+.empty-notes h3 {
+
+    margin: 0 0 6px;
+
+    color: #ffffff;
+
+    font-size: 17px;
+}
+
+
+.empty-notes p {
+
+    margin: 0;
+
+    color: #737987;
+
+    font-size: 13px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================
+   TELJES JEGYZET MODAL
+========================================= */
+
+.note-modal {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    display: none;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    box-sizing: border-box;
+}
+
+
+.note-modal.open {
+
+    display: flex;
+}
+
+
+/* =========================================
+   MODAL HÁTTÉR
+========================================= */
+
+.note-modal-overlay {
+
+    position: absolute;
+
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.75);
+
+    backdrop-filter: blur(5px);
+
+    -webkit-backdrop-filter: blur(5px);
+}
+
+
+/* =========================================
+   MODAL KÁRTYA
+========================================= */
+
+.note-modal-card {
+
+    position: relative;
+
+    z-index: 1;
+
+    width: 100%;
+
+    max-width: 650px;
+
+    max-height: 85vh;
+
+    display: flex;
+
+    flex-direction: column;
+
+    box-sizing: border-box;
+
+    padding: 22px;
+
+    background: #151820;
+
+    border: 1px solid #292d38;
+
+    border-radius: 20px;
+
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.45);
+
+    overflow: hidden;
+
+    min-width: 0;
+}
+
+
+/* =========================================
+   MODAL FEJLÉC
+========================================= */
+
+.note-modal-header {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    width: 100%;
+
+    min-width: 0;
+
+    padding-bottom: 15px;
+
+    border-bottom: 1px solid #252934;
+}
+
+
+.note-modal-header h2 {
+
+    flex: 1;
+
+    min-width: 0;
+
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: 21px;
+
+    line-height: 1.35;
+
+    overflow-wrap: anywhere;
+
+    word-break: break-word;
+}
+
+
+/* =========================================
+   MODAL BEZÁRÁS
+========================================= */
+
+.close-note-modal {
+
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    padding: 0;
+
+    border: 1px solid #292d38;
+
+    border-radius: 10px;
+
+    background: #20242e;
+
+    color: #ffffff;
+
+    font-size: 16px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        transform 0.15s ease;
+}
+
+
+.close-note-modal:hover {
+
+    background: #2b303c;
+}
+
+
+.close-note-modal:active {
+
+    transform: scale(0.9);
+}
+
+
+/* =========================================
+   TELJES JEGYZET SZÖVEGE
+========================================= */
+
+.note-modal-text {
+
+    width: 100%;
+
+    max-width: 100%;
+
+    min-width: 0;
+
+    margin-top: 18px;
+
+    padding-right: 5px;
+
+    box-sizing: border-box;
+
+    color: #c2c6cf;
+
+    font-size: 15px;
+
+    line-height: 1.7;
+
+    white-space: pre-wrap;
+
+    overflow-wrap: anywhere;
+
+    word-break: break-word;
+
+    overflow-y: auto;
+
+    overflow-x: hidden;
+
+    flex: 1;
+}
+
+
+/* =========================================
+   MODAL DÁTUM
+========================================= */
+
+.note-modal-date {
+
+    margin-top: 18px;
+
+    padding-top: 13px;
+
+    border-top: 1px solid #252934;
+
+    color: #656b78;
+
+    font-size: 11px;
+
+    line-height: 1.4;
+}
+
+
+/* =========================================
+   MODAL KÖZBEN OLDAL SCROLL LEZÁRÁSA
+========================================= */
+
+body.note-modal-open {
+
+    overflow: hidden;
+}
+
+
+/* =========================================
+   MOBIL
+========================================= */
+
+@media (max-width: 500px) {
+
+    .notes-editor {
+
+        padding: 15px;
+    }
+
+
+    .note-card {
+
+        padding: 15px;
+    }
+
+
+    .note-card-header h3 {
+
+        font-size: 16px;
+    }
+
+
+    .section-header h2 {
+
+        font-size: 17px;
+    }
+
+
+    /* ==============================
+       MODAL MOBIL
+    ============================== */
+
+    .note-modal {
+
+        padding: 12px;
+    }
+
+
+    .note-modal-card {
+
+        max-height: 90vh;
+
+        padding: 17px;
+
+        border-radius: 17px;
+    }
+
+
+    .note-modal-header h2 {
+
+        font-size: 18px;
+    }
+
+
+    .note-modal-text {
+
+        font-size: 14px;
+
+        line-height: 1.65;
+    }
+
+}
