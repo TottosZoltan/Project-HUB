@@ -12,9 +12,37 @@
 
     <title>Jegyzetek - Project Hub</title>
 
-    <link rel="stylesheet" href="../../style.css">
-    <link rel="stylesheet" href="../pages.css">
-    <link rel="stylesheet" href="notes.css">
+    <link
+        rel="stylesheet"
+        href="../../style.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="../pages.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="notes.css"
+    >
+
+
+    <!-- =========================================
+         APP VÉDELEM
+    ========================================== -->
+
+    <style>
+
+        body {
+            visibility: hidden;
+        }
+
+        body.authenticated {
+            visibility: visible;
+        }
+
+    </style>
 
 </head>
 
@@ -24,7 +52,7 @@
 
     <!-- =========================================
          FEJLÉC
-    ========================================= -->
+    ========================================== -->
 
     <header class="header">
 
@@ -32,7 +60,9 @@
 
             <h1>JEGYZETEK</h1>
 
-            <p>Project Hub</p>
+            <p>
+                Project Hub
+            </p>
 
         </div>
 
@@ -40,6 +70,7 @@
         <a
             href="../../index.html"
             class="back-button"
+            aria-label="Vissza"
         >
 
             <span class="back-arrow"></span>
@@ -52,14 +83,14 @@
 
     <!-- =========================================
          FŐ TARTALOM
-    ========================================= -->
+    ========================================== -->
 
     <main class="page-content notes-page">
 
 
         <!-- =====================================
              BEVEZETŐ
-        ===================================== -->
+        ====================================== -->
 
         <section class="page-intro">
 
@@ -81,7 +112,7 @@
 
         <!-- =====================================
              MODUL GOMBOK
-        ===================================== -->
+        ====================================== -->
 
         <div class="module-actions">
 
@@ -114,8 +145,6 @@
             id="noteEditor"
         >
 
-            <!-- CÍM -->
-
             <input
                 type="text"
                 id="noteTitle"
@@ -123,8 +152,6 @@
                 maxlength="100"
             >
 
-
-            <!-- KATEGÓRIA -->
 
             <select id="noteCategory">
 
@@ -155,16 +182,12 @@
             </select>
 
 
-            <!-- SZÖVEG -->
-
             <textarea
                 id="noteText"
                 placeholder="Írd ide a jegyzeted..."
                 rows="7"
             ></textarea>
 
-
-            <!-- MENTÉS -->
 
             <button
                 id="saveNote"
@@ -189,8 +212,6 @@
             id="noteFilters"
         >
 
-            <!-- KERESÉS -->
-
             <div class="notes-search">
 
                 <span class="search-icon">
@@ -206,8 +227,6 @@
 
             </div>
 
-
-            <!-- SZŰRŐK -->
 
             <div class="notes-filters">
 
@@ -277,8 +296,6 @@
         <section class="notes-section">
 
 
-            <!-- FEJLÉC -->
-
             <div class="section-header">
 
                 <h2>
@@ -293,16 +310,12 @@
 
 
 
-            <!-- JEGYZETEK -->
-
             <div
                 id="notesList"
                 class="notes-list"
             ></div>
 
 
-
-            <!-- NINCS JEGYZET -->
 
             <div
                 id="emptyNotes"
@@ -324,8 +337,6 @@
             </div>
 
 
-
-            <!-- NINCS TALÁLAT -->
 
             <div
                 id="noSearchResults"
@@ -355,27 +366,21 @@
 
     <!-- =========================================
          TELJES JEGYZET MODAL
-    ========================================= -->
+    ========================================== -->
 
     <div
         id="noteModal"
         class="note-modal"
     >
 
-        <!-- HÁTTÉR -->
-
         <div class="note-modal-overlay"></div>
 
-
-        <!-- KÁRTYA -->
 
         <div
             class="note-modal-card"
             role="dialog"
             aria-modal="true"
         >
-
-            <!-- FEJLÉC -->
 
             <div class="note-modal-header">
 
@@ -410,16 +415,12 @@
 
 
 
-            <!-- SZÖVEG -->
-
             <div
                 id="modalNoteText"
                 class="note-modal-text"
             ></div>
 
 
-
-            <!-- DÁTUM -->
 
             <div
                 id="modalNoteDate"
@@ -432,9 +433,202 @@
 
 
 
-    <!-- JAVASCRIPT -->
+    <!-- =========================================
+         AUTH ELLENŐRZÉS
+    ========================================== -->
+
+    <script>
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+
+                const BACKEND_URL =
+                    "https://project-hub-backend-1.onrender.com";
+
+
+                const LOGIN_PAGE =
+                    "../auth/login.html";
+
+
+                // =====================================
+                // TOKEN
+                // =====================================
+
+                const token =
+                    localStorage.getItem(
+                        "projectHubAuthToken"
+                    );
+
+
+                // =====================================
+                // NINCS TOKEN
+                // =====================================
+
+                if (!token) {
+
+                    sessionStorage.setItem(
+                        "projectHubAuthMessage",
+                        "🔐 A Jegyzetek használatához be kell jelentkezned."
+                    );
+
+                    window.location.href =
+                        LOGIN_PAGE;
+
+                    return;
+
+                }
+
+
+                // =====================================
+                // AUTH ELLENŐRZÉS
+                // =====================================
+
+                try {
+
+                    const response =
+                        await fetch(
+                            BACKEND_URL +
+                            "/api/auth/me",
+                            {
+                                method: "GET",
+
+                                headers: {
+                                    "Authorization":
+                                        "Bearer " + token
+                                },
+
+                                credentials:
+                                    "include"
+                            }
+                        );
+
+
+                    let result;
+
+
+                    try {
+
+                        result =
+                            await response.json();
+
+                    } catch (jsonError) {
+
+                        console.error(
+                            "Auth válasz feldolgozási hiba:",
+                            jsonError
+                        );
+
+                        localStorage.removeItem(
+                            "projectHubAuthToken"
+                        );
+
+                        sessionStorage.setItem(
+                            "projectHubAuthMessage",
+                            "⚠️ A munkamenetet nem sikerült ellenőrizni. Jelentkezz be újra."
+                        );
+
+                        window.location.href =
+                            LOGIN_PAGE;
+
+                        return;
+
+                    }
+
+
+                    console.log(
+                        "JEGYZETEK AUTH ELLENŐRZÉS:",
+                        result
+                    );
+
+
+                    // =================================
+                    // SIKERES AUTH
+                    // =================================
+
+                    if (
+                        response.ok &&
+                        result.success &&
+                        result.user
+                    ) {
+
+                        console.log(
+                            "Jegyzetek oldal engedélyezve:",
+                            result.user.username
+                        );
+
+
+                        document.body.classList.add(
+                            "authenticated"
+                        );
+
+
+                        return;
+
+                    }
+
+
+                    // =================================
+                    // ÉRVÉNYTELEN TOKEN
+                    // =================================
+
+                    localStorage.removeItem(
+                        "projectHubAuthToken"
+                    );
+
+
+                    sessionStorage.setItem(
+                        "projectHubAuthMessage",
+                        "🔐 A munkameneted lejárt. Kérlek jelentkezz be újra."
+                    );
+
+
+                    window.location.href =
+                        LOGIN_PAGE;
+
+
+                } catch (error) {
+
+                    console.error(
+                        "Jegyzetek auth ellenőrzési hiba:",
+                        error
+                    );
+
+
+                    localStorage.removeItem(
+                        "projectHubAuthToken"
+                    );
+
+
+                    sessionStorage.setItem(
+                        "projectHubAuthMessage",
+                        "⚠️ A munkamenetet nem sikerült ellenőrizni. Jelentkezz be újra."
+                    );
+
+
+                    window.location.href =
+                        LOGIN_PAGE;
+
+                }
+
+            }
+        );
+
+    </script>
+
+
+
+    <!-- =========================================
+         PROJECT HUB SCRIPT
+    ========================================== -->
 
     <script src="../../script.js"></script>
+
+
+    <!-- =========================================
+         JEGYZETEK SCRIPT
+    ========================================== -->
+
     <script src="notes.js"></script>
 
 
