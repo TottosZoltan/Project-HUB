@@ -252,3 +252,121 @@ main {
     }
 
 }
+/* =========================
+   OLDALSÓ MENÜ
+========================= */
+
+.side-menu {
+    position: fixed;
+
+    top: 0;
+    right: 0;
+
+    width: 280px;
+    height: 100vh;
+
+    background: #151820;
+
+    border-left: 1px solid #292d38;
+
+    z-index: 1000;
+
+    padding: 25px;
+
+    transform: translateX(100%);
+
+    transition: transform 0.3s ease;
+}
+
+.side-menu.open {
+    transform: translateX(0);
+}
+
+
+/* MENÜ FEJLÉC */
+
+.menu-header {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    padding-bottom: 25px;
+
+    border-bottom: 1px solid #292d38;
+}
+
+.menu-header h2 {
+    font-size: 16px;
+    letter-spacing: 2px;
+}
+
+.close-button {
+    width: 40px;
+    height: 40px;
+
+    border: 1px solid #292d38;
+    border-radius: 10px;
+
+    background: #20242e;
+
+    color: white;
+
+    font-size: 18px;
+}
+
+
+/* MENÜ LINKJEK */
+
+.menu-links {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+
+    margin-top: 25px;
+}
+
+.menu-links a {
+    display: block;
+
+    padding: 15px;
+
+    border-radius: 12px;
+
+    color: #d5d8df;
+
+    transition: 0.2s;
+}
+
+.menu-links a:active {
+    background: #20242e;
+
+    transform: scale(0.98);
+}
+
+
+/* HÁTTÉR */
+
+.menu-overlay {
+    position: fixed;
+
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.6);
+
+    z-index: 999;
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition: opacity 0.3s ease;
+}
+
+.menu-overlay.open {
+    opacity: 1;
+
+    pointer-events: auto;
+}
