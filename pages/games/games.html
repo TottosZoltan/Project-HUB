@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="hu">
 
@@ -612,15 +611,3 @@
 </body>
 
 </html>
-```
-
-Ez a HTML már előkészíti az egész Steam rendszert. **Viszont önmagában még nem fog működni**, mert a `games.js`-nek is tudnia kell kezelni ezeket az ID-kat, illetve a backendben is kell a Steam-linkelés.
-
-A következő lépésben a **`games.js` teljes fájlját** érdemes megcsinálnunk az új backendhez, úgy hogy:
-
-1. betölti, össze van-e kötve a Steam,
-2. ha nincs → „Steam összekötése”,
-3. ha van → profil + játéklista,
-4. játékra kattintva → játékidő + achievementek,
-5. Steam leválasztás is működik,
-6. a Steam-link visszatérés után automatikusan frissül.
