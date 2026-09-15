@@ -8,9 +8,15 @@ const express = require("express");
 
 const cors = require("cors");
 
+const session = require("express-session");
+
+const connectPgSimple =
+    require("connect-pg-simple");
+
 const { Pool } = require("pg");
 
 const bcrypt = require("bcrypt");
+
 
 // =========================================
 // EXPRESS
@@ -21,37 +27,11 @@ const app =
 
 
 // =========================================
-// MIDDLEWARE
-// =========================================
-
-app.use(
-    cors({
-        origin: true
-    })
-);
-
-app.use(
-    express.json()
-);
-
-
-// =========================================
 // PORT
 // =========================================
 
 const PORT =
     process.env.PORT || 3000;
-
-
-// =========================================
-// STEAM ADATOK
-// =========================================
-
-const STEAM_API_KEY =
-    process.env.STEAM_API_KEY;
-
-const STEAM_ID =
-    process.env.STEAM_ID;
 
 
 // =========================================
@@ -72,7 +52,92 @@ const pool =
 
 
 // =========================================
-// ADATBÁZIS TESZT
+// MIDDLEWARE
+// =========================================
+
+app.use(
+    cors({
+
+        origin: true,
+
+        credentials: true
+
+    })
+);
+
+
+app.use(
+    express.json()
+);
+
+
+// =========================================
+// SESSION
+// =========================================
+
+const PgSession =
+    connectPgSimple(
+        session
+    );
+
+
+app.use(
+    session({
+
+        store:
+            new PgSession({
+
+                pool: pool,
+
+                tableName:
+                    "sessions",
+
+                createTableIfMissing:
+                    true
+
+            }),
+
+        secret:
+            process.env.SESSION_SECRET,
+
+        resave: false,
+
+        saveUninitialized: false,
+
+        cookie: {
+
+            httpOnly: true,
+
+            secure: true,
+
+            sameSite: "none",
+
+            maxAge:
+                1000 *
+                60 *
+                60 *
+                24 *
+                30
+
+        }
+
+    })
+);
+
+
+// =========================================
+// STEAM ADATOK
+// =========================================
+
+const STEAM_API_KEY =
+    process.env.STEAM_API_KEY;
+
+const STEAM_ID =
+    process.env.STEAM_ID;
+
+
+// =========================================
+// ADATBÁZIS
 // =========================================
 
 async function initializeDatabase() {
@@ -85,15 +150,20 @@ async function initializeDatabase() {
 
                 id SERIAL PRIMARY KEY,
 
-                username VARCHAR(50) NOT NULL UNIQUE,
+                username VARCHAR(50)
+                    NOT NULL UNIQUE,
 
-                email VARCHAR(255) NOT NULL UNIQUE,
+                email VARCHAR(255)
+                    NOT NULL UNIQUE,
 
-                password_hash TEXT NOT NULL,
+                password_hash TEXT
+                    NOT NULL,
 
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP,
 
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
 
             );
 
@@ -142,6 +212,8 @@ app.get(
 
     }
 );
+
+
 // =========================================
 // REGISZTRÁCIÓ
 // =========================================
@@ -158,10 +230,6 @@ app.post(
                 password
             } = req.body;
 
-
-            // =========================================
-            // ELLENŐRZÉS
-            // =========================================
 
             if (
                 !username ||
@@ -181,7 +249,9 @@ app.post(
             }
 
 
-            if (password.length < 8) {
+            if (
+                password.length < 8
+            ) {
 
                 return res.status(400).json({
 
@@ -195,10 +265,6 @@ app.post(
             }
 
 
-            // =========================================
-            // FELHASZNÁLÓNÉV / EMAIL ELLENŐRZÉSE
-            // =========================================
-
             const existingUser =
                 await pool.query(
 
@@ -211,8 +277,13 @@ app.post(
                     `,
 
                     [
+
                         username.trim(),
-                        email.trim().toLowerCase()
+
+                        email
+                            .trim()
+                            .toLowerCase()
+
                     ]
 
                 );
@@ -234,20 +305,12 @@ app.post(
             }
 
 
-            // =========================================
-            // JELSZÓ HASH
-            // =========================================
-
             const passwordHash =
                 await bcrypt.hash(
                     password,
                     12
                 );
 
-
-            // =========================================
-            // FELHASZNÁLÓ LÉTREHOZÁSA
-            // =========================================
 
             const result =
                 await pool.query(
@@ -275,17 +338,19 @@ app.post(
                     `,
 
                     [
+
                         username.trim(),
-                        email.trim().toLowerCase(),
+
+                        email
+                            .trim()
+                            .toLowerCase(),
+
                         passwordHash
+
                     ]
 
                 );
 
-
-            // =========================================
-            // SIKERES REGISZTRÁCIÓ
-            // =========================================
 
             res.status(201).json({
 
@@ -323,6 +388,7 @@ app.post(
     }
 );
 
+
 // =========================================
 // BEJELENTKEZÉS
 // =========================================
@@ -338,10 +404,6 @@ app.post(
                 password
             } = req.body;
 
-
-            // =========================================
-            // ELLENŐRZÉS
-            // =========================================
 
             if (
                 !email ||
@@ -360,10 +422,6 @@ app.post(
             }
 
 
-            // =========================================
-            // FELHASZNÁLÓ KERESÉSE
-            // =========================================
-
             const result =
                 await pool.query(
 
@@ -379,7 +437,11 @@ app.post(
                     `,
 
                     [
-                        email.trim().toLowerCase()
+
+                        email
+                            .trim()
+                            .toLowerCase()
+
                     ]
 
                 );
@@ -405,14 +467,13 @@ app.post(
                 result.rows[0];
 
 
-            // =========================================
-            // JELSZÓ ELLENŐRZÉSE
-            // =========================================
-
             const passwordMatches =
                 await bcrypt.compare(
+
                     password,
+
                     user.password_hash
+
                 );
 
 
@@ -431,8 +492,16 @@ app.post(
 
 
             // =========================================
-            // SIKERES BEJELENTKEZÉS
+            // SESSION LÉTREHOZÁSA
             // =========================================
+
+            req.session.userId =
+                user.id;
+
+
+            req.session.username =
+                user.username;
+
 
             res.json({
 
@@ -479,6 +548,161 @@ app.post(
 
     }
 );
+
+
+// =========================================
+// BEJELENTKEZETT FELHASZNÁLÓ
+// =========================================
+
+app.get(
+    "/api/auth/me",
+    async function (req, res) {
+
+        try {
+
+            if (
+                !req.session.userId
+            ) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Nincs bejelentkezett felhasználó."
+
+                });
+
+            }
+
+
+            const result =
+                await pool.query(
+
+                    `
+                    SELECT
+                        id,
+                        username,
+                        email,
+                        created_at
+                    FROM users
+                    WHERE id = $1
+                    LIMIT 1
+                    `,
+
+                    [
+                        req.session.userId
+                    ]
+
+                );
+
+
+            if (
+                result.rows.length === 0
+            ) {
+
+                req.session.destroy(
+                    function () {}
+                );
+
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "A felhasználó nem található."
+
+                });
+
+            }
+
+
+            res.json({
+
+                success: true,
+
+                user:
+                    result.rows[0]
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Felhasználó lekérdezési hiba:",
+                error
+            );
+
+
+            res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült lekérni a felhasználói adatokat."
+
+            });
+
+        }
+
+    }
+);
+
+
+// =========================================
+// KIJELENTKEZÉS
+// =========================================
+
+app.post(
+    "/api/auth/logout",
+    function (req, res) {
+
+        req.session.destroy(
+            function (error) {
+
+                if (error) {
+
+                    console.error(
+                        "Kijelentkezési hiba:",
+                        error
+                    );
+
+
+                    return res.status(500).json({
+
+                        success: false,
+
+                        message:
+                            "Nem sikerült kijelentkezni."
+
+                    });
+
+                }
+
+
+                res.clearCookie(
+                    "connect.sid"
+                );
+
+
+                res.json({
+
+                    success: true,
+
+                    message:
+                        "Sikeres kijelentkezés."
+
+                });
+
+            }
+        );
+
+    }
+);
+
 
 // =========================================
 // ADATBÁZIS TESZT
@@ -640,8 +864,11 @@ async function startServer() {
 
 
     app.listen(
+
         PORT,
+
         "0.0.0.0",
+
         function () {
 
             console.log(
@@ -649,6 +876,7 @@ async function startServer() {
             );
 
         }
+
     );
 
 }
