@@ -513,6 +513,14 @@ async function createTask(
 // =========================================
 // FELADAT MÓDOSÍTÁSA
 // =========================================
+// FONTOS:
+// Ez részleges módosítást használ.
+// Ezért például:
+// { completed: true }
+// vagy:
+// { pinned: true }
+// önmagában is működik.
+// =========================================
 
 async function updateTask(
     id,
@@ -1162,6 +1170,7 @@ function renderTasks() {
                 pin.title =
                     "Fontos feladat";
 
+
                 titleWrapper.appendChild(
                     pin
                 );
@@ -1435,205 +1444,211 @@ function renderTasks() {
 // ÚJ FELADAT / SZERKESZTÉS
 // =========================================
 
-saveTaskButton.addEventListener(
-    "click",
-    async function () {
+if (
+    saveTaskButton
+) {
 
-        const title =
-            taskTitle.value.trim();
+    saveTaskButton.addEventListener(
+        "click",
+        async function () {
 
-        const description =
-            taskDescription.value.trim();
+            const title =
+                taskTitle.value.trim();
 
-        const priority =
-            taskPriority.value;
+            const description =
+                taskDescription.value.trim();
 
-        const category =
-            taskCategory.value;
+            const priority =
+                taskPriority.value;
 
+            const category =
+                taskCategory.value;
 
-        if (
-            title === ""
-        ) {
-
-            alert(
-                "Kérlek add meg a feladat nevét!"
-            );
-
-            taskTitle.focus();
-
-            return;
-
-        }
-
-
-        saveTaskButton.disabled =
-            true;
-
-
-        try {
-
-            // =================================
-            // SZERKESZTÉS
-            // =================================
 
             if (
-                editingTaskId !== null
+                title === ""
             ) {
 
-                const updatedTask =
-                    await updateTask(
-                        editingTaskId,
-                        {
+                alert(
+                    "Kérlek add meg a feladat nevét!"
+                );
 
-                            title:
-                                title,
+                taskTitle.focus();
 
-                            description:
-                                description,
+                return;
 
-                            priority:
-                                priority,
-
-                            category:
-                                category
-
-                        }
-                    );
+            }
 
 
-                if (updatedTask) {
+            saveTaskButton.disabled =
+                true;
 
-                    tasks =
-                        tasks.map(
-                            function (task) {
 
-                                if (
-                                    Number(task.id) ===
-                                    Number(editingTaskId)
-                                ) {
+            try {
 
-                                    return normalizeTask(
-                                        updatedTask
-                                    );
+                // =================================
+                // SZERKESZTÉS
+                // =================================
 
-                                }
+                if (
+                    editingTaskId !== null
+                ) {
 
-                                return task;
+                    const updatedTask =
+                        await updateTask(
+                            editingTaskId,
+                            {
+
+                                title:
+                                    title,
+
+                                description:
+                                    description,
+
+                                priority:
+                                    priority,
+
+                                category:
+                                    category
 
                             }
                         );
 
-                }
+
+                    if (updatedTask) {
+
+                        tasks =
+                            tasks.map(
+                                function (task) {
+
+                                    if (
+                                        Number(task.id) ===
+                                        Number(editingTaskId)
+                                    ) {
+
+                                        return normalizeTask(
+                                            updatedTask
+                                        );
+
+                                    }
+
+                                    return task;
+
+                                }
+                            );
+
+                    }
 
 
-                editingTaskId =
-                    null;
+                    editingTaskId =
+                        null;
 
 
-                saveTaskButton.textContent =
-                    "➕ Feladat hozzáadása";
-
-            }
-
-
-            // =================================
-            // ÚJ FELADAT
-            // =================================
-
-            else {
-
-                const newTask =
-                    await createTask(
-                        title,
-                        description,
-                        priority,
-                        category
-                    );
-
-
-                if (newTask) {
-
-                    tasks.unshift(
-                        normalizeTask(
-                            newTask
-                        )
-                    );
+                    saveTaskButton.textContent =
+                        "➕ Feladat hozzáadása";
 
                 }
 
+
+                // =================================
+                // ÚJ FELADAT
+                // =================================
+
+                else {
+
+                    const newTask =
+                        await createTask(
+                            title,
+                            description,
+                            priority,
+                            category
+                        );
+
+
+                    if (newTask) {
+
+                        tasks.unshift(
+                            normalizeTask(
+                                newTask
+                            )
+                        );
+
+                    }
+
+                }
+
+
+                // =================================
+                // MEZŐK ÜRÍTÉSE
+                // =================================
+
+                taskTitle.value =
+                    "";
+
+                taskDescription.value =
+                    "";
+
+                taskPriority.value =
+                    "normal";
+
+                taskCategory.value =
+                    "Egyéb";
+
+
+                // =================================
+                // PANEL BEZÁRÁSA
+                // =================================
+
+                if (
+                    taskEditor
+                ) {
+
+                    taskEditor.classList.remove(
+                        "open"
+                    );
+
+                }
+
+
+                if (
+                    toggleTaskEditor
+                ) {
+
+                    toggleTaskEditor.textContent =
+                        "➕ Új feladat";
+
+                }
+
+
+                renderTasks();
+
             }
 
+            catch (error) {
 
-            // =================================
-            // MEZŐK ÜRÍTÉSE
-            // =================================
+                console.error(
+                    "FELADAT MENTÉSI HIBA:",
+                    error
+                );
 
-            taskTitle.value =
-                "";
-
-            taskDescription.value =
-                "";
-
-            taskPriority.value =
-                "normal";
-
-            taskCategory.value =
-                "Egyéb";
-
-
-            // =================================
-            // PANEL BEZÁRÁSA
-            // =================================
-
-            if (
-                taskEditor
-            ) {
-
-                taskEditor.classList.remove(
-                    "open"
+                alert(
+                    "A feladat mentése nem sikerült.\n\n" +
+                    error.message
                 );
 
             }
 
+            finally {
 
-            if (
-                toggleTaskEditor
-            ) {
-
-                toggleTaskEditor.textContent =
-                    "➕ Új feladat";
+                saveTaskButton.disabled =
+                    false;
 
             }
 
-
-            renderTasks();
-
         }
+    );
 
-        catch (error) {
-
-            console.error(
-                "FELADAT MENTÉSI HIBA:",
-                error
-            );
-
-            alert(
-                "A feladat mentése nem sikerült.\n\n" +
-                error.message
-            );
-
-        }
-
-        finally {
-
-            saveTaskButton.disabled =
-                false;
-
-        }
-
-    }
-);
+}
 
 
 // =========================================
@@ -2003,103 +2018,139 @@ async function deleteTask(id) {
 // KERESÉS
 // =========================================
 
-taskSearch.addEventListener(
-    "input",
-    function () {
+if (
+    taskSearch
+) {
 
-        renderTasks();
+    taskSearch.addEventListener(
+        "input",
+        function () {
 
-    }
-);
+            renderTasks();
+
+        }
+    );
+
+}
 
 
 // =========================================
 // STÁTUSZ SZŰRÉS
 // =========================================
 
-taskStatusFilter.addEventListener(
-    "change",
-    function () {
+if (
+    taskStatusFilter
+) {
 
-        renderTasks();
+    taskStatusFilter.addEventListener(
+        "change",
+        function () {
 
-    }
-);
+            renderTasks();
+
+        }
+    );
+
+}
 
 
 // =========================================
 // KATEGÓRIA SZŰRÉS
 // =========================================
 
-taskCategoryFilter.addEventListener(
-    "change",
-    function () {
+if (
+    taskCategoryFilter
+) {
 
-        renderTasks();
+    taskCategoryFilter.addEventListener(
+        "change",
+        function () {
 
-    }
-);
+            renderTasks();
+
+        }
+    );
+
+}
 
 
 // =========================================
 // RENDEZÉS
 // =========================================
 
-taskSort.addEventListener(
-    "change",
-    function () {
+if (
+    taskSort
+) {
 
-        renderTasks();
+    taskSort.addEventListener(
+        "change",
+        function () {
 
-    }
-);
+            renderTasks();
+
+        }
+    );
+
+}
 
 
 // =========================================
 // ESC A KERESŐBEN
 // =========================================
 
-taskSearch.addEventListener(
-    "keydown",
-    function (event) {
+if (
+    taskSearch
+) {
 
-        if (
-            event.key === "Escape"
-        ) {
+    taskSearch.addEventListener(
+        "keydown",
+        function (event) {
 
-            taskSearch.value =
-                "";
+            if (
+                event.key === "Escape"
+            ) {
 
-            renderTasks();
+                taskSearch.value =
+                    "";
 
-            taskSearch.blur();
+                renderTasks();
+
+                taskSearch.blur();
+
+            }
 
         }
+    );
 
-    }
-);
+}
 
 
 // =========================================
 // ENTER = FELADAT MENTÉSE
 // =========================================
 
-taskTitle.addEventListener(
-    "keydown",
-    function (event) {
+if (
+    taskTitle
+) {
 
-        if (
-            event.key === "Enter"
-        ) {
+    taskTitle.addEventListener(
+        "keydown",
+        function (event) {
 
-            event.preventDefault();
+            if (
+                event.key === "Enter"
+            ) {
 
-            saveTaskButton.click();
+                event.preventDefault();
+
+                saveTaskButton.click();
+
+            }
 
         }
+    );
 
-    }
-);
+}
 
 
 // =========================================
@@ -2140,7 +2191,11 @@ if (
                 toggleTaskEditor.textContent =
                     "➖ Új feladat";
 
-                taskTitle.focus();
+                if (taskTitle) {
+
+                    taskTitle.focus();
+
+                }
 
             }
 
@@ -2188,7 +2243,11 @@ if (
                 toggleTaskFilters.textContent =
                     "➖ Keresés és szűrés";
 
-                taskSearch.focus();
+                if (taskSearch) {
+
+                    taskSearch.focus();
+
+                }
 
             }
 
@@ -2199,7 +2258,97 @@ if (
 
 
 // =========================================
+// HAMBURGER MENÜ KOMPATIBILITÁS
+// =========================================
+// A hamburger menü kezelése normál esetben
+// a közös Project Hub script feladata.
+//
+// Ez a rész NEM írja felül a meglévő
+// hamburger működést.
+//
+// A korábbi rendszerben az állapot:
+//     .open
+// és NEM:
+//     .active
+//
+// Ha ezen az oldalon nincs hamburger,
+// a Tasks modul ettől még működik.
+// =========================================
+
+function initializeTasksHamburgerCompatibility() {
+
+    const hamburger =
+        document.querySelector(
+            ".hamburger, " +
+            ".hamburger-button, " +
+            ".menu-toggle, " +
+            "[data-menu-toggle]"
+        );
+
+
+    const menu =
+        document.querySelector(
+            ".mobile-menu, " +
+            ".hamburger-menu, " +
+            ".side-menu, " +
+            "[data-mobile-menu]"
+        );
+
+
+    // Ha ezen az oldalon nincs ilyen elem,
+    // egyszerűen nem csinálunk semmit.
+    //
+    // Így a Tasks modul nem dob hibát
+    // hiányzó hamburger elem miatt.
+
+    if (
+        !hamburger ||
+        !menu
+    ) {
+
+        return;
+
+    }
+
+
+    // Ha már van másik hamburger-kezelő,
+    // nem kötünk rá még egyet.
+    if (
+        hamburger.dataset.tasksHamburgerInitialized ===
+        "true"
+    ) {
+
+        return;
+
+    }
+
+
+    hamburger.dataset.tasksHamburgerInitialized =
+        "true";
+
+
+    hamburger.addEventListener(
+        "click",
+        function (event) {
+
+            event.preventDefault();
+
+            event.stopPropagation();
+
+            menu.classList.toggle(
+                "open"
+            );
+
+        }
+    );
+
+}
+
+
+// =========================================
 // INDULÁS
 // =========================================
+
+initializeTasksHamburgerCompatibility();
 
 loadTasks();
