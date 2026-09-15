@@ -2,78 +2,42 @@
 <html lang="hu">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Jegyzetek - Project Hub</title>
 
-
-    <!-- FŐ OLDAL CSS -->
-
-    <link
-        rel="stylesheet"
-        href="../style.css"
-    >
-
-
-    <!-- MODULOK KÖZÖS CSS -->
-
-    <link
-        rel="stylesheet"
-        href="pages.css"
-    >
-
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="pages.css">
 </head>
-
 
 <body>
 
-
-    <!-- =========================
+    <!-- =========================================
          FEJLÉC
-    ========================== -->
+    ========================================= -->
 
     <header class="header">
 
         <div>
-
             <h1>JEGYZETEK</h1>
-
             <p>Project Hub</p>
-
         </div>
 
-
-        <!-- VISSZA -->
-
-        <a
-            href="../"
-            class="back-button"
-        >
-
+        <a href="../" class="back-button">
             <span class="back-arrow"></span>
-
         </a>
 
     </header>
 
 
-
-    <!-- =========================
-         FŐ TARTALOM
-    ========================== -->
+    <!-- =========================================
+         JEGYZETEK OLDAL
+    ========================================= -->
 
     <main class="page-content notes-page">
 
-
-        <!-- =========================
-             CÍM
-        ========================== -->
+        <!-- BEVEZETŐ -->
 
         <section class="page-intro">
 
@@ -92,10 +56,9 @@
         </section>
 
 
-
-        <!-- =========================
+        <!-- =====================================
              ÚJ JEGYZET
-        ========================== -->
+        ===================================== -->
 
         <section class="notes-editor">
 
@@ -106,36 +69,28 @@
                 maxlength="100"
             >
 
-
             <textarea
                 id="noteText"
                 placeholder="Írd ide a jegyzeted..."
                 rows="7"
             ></textarea>
 
-
             <button
                 id="saveNote"
                 class="save-note-button"
                 type="button"
             >
-
                 💾 Jegyzet mentése
-
             </button>
 
         </section>
 
 
-
-        <!-- =========================
-             JEGYZETEK
-        ========================== -->
+        <!-- =====================================
+             MENTETT JEGYZETEK
+        ===================================== -->
 
         <section class="notes-section">
-
-
-            <!-- FEJLÉC -->
 
             <div class="section-header">
 
@@ -150,14 +105,10 @@
             </div>
 
 
-
-            <!-- JEGYZETEK -->
-
             <div
                 id="notesList"
                 class="notes-list"
             ></div>
-
 
 
             <!-- ÜRES ÁLLAPOT -->
@@ -183,19 +134,71 @@
 
         </section>
 
-
     </main>
 
 
+    <!-- =========================================
+         TELJES JEGYZET MODAL
+    ========================================= -->
 
-    <!-- =========================
-         JAVASCRIPT
-    ========================== -->
+    <div
+        id="noteModal"
+        class="note-modal"
+    >
+
+        <div class="note-modal-overlay"></div>
+
+
+        <div
+            class="note-modal-card"
+            role="dialog"
+            aria-modal="true"
+        >
+
+            <!-- MODAL FEJLÉC -->
+
+            <div class="note-modal-header">
+
+                <h2 id="modalNoteTitle">
+                    Jegyzet
+                </h2>
+
+                <button
+                    id="closeNoteModal"
+                    class="close-note-modal"
+                    type="button"
+                    aria-label="Bezárás"
+                >
+                    ✕
+                </button>
+
+            </div>
+
+
+            <!-- TELJES JEGYZET -->
+
+            <div
+                id="modalNoteText"
+                class="note-modal-text"
+            ></div>
+
+
+            <!-- DÁTUM -->
+
+            <div
+                id="modalNoteDate"
+                class="note-modal-date"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- JAVASCRIPT -->
 
     <script src="../script.js"></script>
-
     <script src="notes.js"></script>
-
 
 </body>
 
