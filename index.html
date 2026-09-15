@@ -2,30 +2,47 @@
 <html lang="hu">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Project Hub</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
 </head>
 
+
 <body>
+
 
     <!-- =========================
          OLDALSÓ MENÜ
     ========================== -->
 
-    <nav class="side-menu" id="sideMenu">
+    <nav
+        class="side-menu"
+        id="sideMenu"
+    >
 
         <div class="menu-header">
 
-            <h2>PROJECT HUB</h2>
+            <h2>
+                PROJECT HUB
+            </h2>
 
             <button
                 type="button"
                 id="closeMenu"
-                class="close-button">
+                class="close-button"
+            >
                 ✕
             </button>
 
@@ -34,39 +51,42 @@
 
         <div class="menu-links">
 
-            <a href="pages/notes.html">
+            <a href="pages/notes/notes.html">
                 📝 Jegyzetek
             </a>
 
-            <a href="pages/tasks.html">
+            <a href="pages/tasks/tasks.html">
                 ✅ Feladatok
             </a>
 
-            <a href="pages/games.html">
+            <a href="pages/games/games.html">
                 🎮 Játékok
             </a>
 
-            <a href="pages/places.html">
+            <a href="pages/places/places.html">
                 📍 Helyek
             </a>
 
             <a
-                href="pages/login.html"
-                id="loginMenuItem">
+                href="pages/auth/login.html"
+                id="loginMenuItem"
+            >
                 🔐 Bejelentkezés
             </a>
 
             <a
                 href="#"
                 id="userMenuItem"
-                style="display: none;">
+                style="display: none;"
+            >
                 👤 <span id="usernameDisplay"></span>
             </a>
 
             <a
                 href="#"
                 id="logoutButton"
-                style="display: none;">
+                style="display: none;"
+            >
                 🚪 Kijelentkezés
             </a>
 
@@ -75,14 +95,17 @@
     </nav>
 
 
+
     <!-- =========================
          MENÜ HÁTTÉR
     ========================== -->
 
     <div
         class="menu-overlay"
-        id="menuOverlay">
+        id="menuOverlay"
+    >
     </div>
+
 
 
     <!-- =========================
@@ -93,9 +116,13 @@
 
         <div>
 
-            <h1>PROJECT HUB</h1>
+            <h1>
+                PROJECT HUB
+            </h1>
 
-            <p>Saját személyes dashboard</p>
+            <p>
+                Saját személyes dashboard
+            </p>
 
         </div>
 
@@ -103,7 +130,8 @@
         <button
             type="button"
             id="menuButton"
-            class="menu-button">
+            class="menu-button"
+        >
 
             ☰
 
@@ -112,11 +140,13 @@
     </header>
 
 
+
     <!-- =========================
          FŐ TARTALOM
     ========================== -->
 
     <main>
+
 
         <!-- ÜDVÖZLŐ RÉSZ -->
 
@@ -137,6 +167,7 @@
         </section>
 
 
+
         <!-- =========================
              APP KÁRTYÁK
         ========================== -->
@@ -147,8 +178,9 @@
             <!-- JEGYZETEK -->
 
             <a
-                href="pages/notes.html"
-                class="app-card">
+                href="pages/notes/notes.html"
+                class="app-card"
+            >
 
                 <span class="app-icon">
                     📝
@@ -169,11 +201,13 @@
             </a>
 
 
+
             <!-- FELADATOK -->
 
             <a
-                href="pages/tasks.html"
-                class="app-card">
+                href="pages/tasks/tasks.html"
+                class="app-card"
+            >
 
                 <span class="app-icon">
                     ✅
@@ -194,11 +228,13 @@
             </a>
 
 
+
             <!-- JÁTÉKOK -->
 
             <a
-                href="pages/games.html"
-                class="app-card">
+                href="pages/games/games.html"
+                class="app-card"
+            >
 
                 <span class="app-icon">
                     🎮
@@ -219,11 +255,13 @@
             </a>
 
 
+
             <!-- HELYEK -->
 
             <a
-                href="pages/places.html"
-                class="app-card">
+                href="pages/places/places.html"
+                class="app-card"
+            >
 
                 <span class="app-icon">
                     📍
@@ -247,6 +285,7 @@
         </section>
 
 
+
         <!-- =========================
              ÁTTEKINTÉS
         ========================== -->
@@ -264,6 +303,7 @@
                 </span>
 
             </div>
+
 
 
             <!-- STATISZTIKÁK -->
@@ -318,11 +358,13 @@
     </main>
 
 
+
     <!-- =========================
          JAVASCRIPT
     ========================== -->
 
     <script src="script.js"></script>
+
 
 </body>
 
