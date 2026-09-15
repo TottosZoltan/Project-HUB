@@ -142,7 +142,20 @@ document.addEventListener(
                         "Bejelentkezett felhasználó:",
                         result.user
                     );
+const meResponse = await fetch(
+    BACKEND_URL + "/api/auth/me",
+    {
+        method: "GET",
+        credentials: "include"
+    }
+);
 
+const meResult = await meResponse.json();
+
+console.log(
+    "Session ellenőrzés:",
+    meResult
+);
 
                 }
 
