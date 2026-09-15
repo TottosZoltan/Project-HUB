@@ -3,46 +3,56 @@
 // FŐ SCRIPT
 // =========================================
 
+document.addEventListener("DOMContentLoaded", function () {
 
-// =========================================
-// DOM BETÖLTÉS
-// =========================================
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        // =========================================
-        // MENÜ
-        // =========================================
-
-        const menuButton =
-            document.getElementById("menuButton");
-
-        const closeMenu =
-            document.getElementById("closeMenu");
-
-        const sideMenu =
-            document.getElementById("sideMenu");
-
-        const menuOverlay =
-            document.getElementById("menuOverlay");
+    console.log("PROJECT HUB SCRIPT BETÖLTŐDÖTT");
 
 
-        if (
-            !menuButton ||
-            !closeMenu ||
-            !sideMenu ||
-            !menuOverlay
-        ) {
+    // =========================================
+    // BACKEND
+    // =========================================
 
-            console.error(
-                "A menü egyik eleme hiányzik az index.html-ből."
-            );
+    const BACKEND_URL =
+        "https://project-hub-backend-1.onrender.com";
 
-            return;
 
-        }
+    // =========================================
+    // MENÜ ELEMEK
+    // =========================================
+
+    const menuButton =
+        document.getElementById("menuButton");
+
+    const closeMenu =
+        document.getElementById("closeMenu");
+
+    const sideMenu =
+        document.getElementById("sideMenu");
+
+    const menuOverlay =
+        document.getElementById("menuOverlay");
+
+
+    // =========================================
+    // MENÜ ELLENŐRZÉS
+    // =========================================
+
+    if (
+        !menuButton ||
+        !closeMenu ||
+        !sideMenu ||
+        !menuOverlay
+    ) {
+
+        console.error(
+            "HIBA: A hamburger menü egyik eleme hiányzik!"
+        );
+
+    } else {
+
+        console.log(
+            "Hamburger menü elemei rendben."
+        );
 
 
         // =========================================
@@ -53,13 +63,13 @@ document.addEventListener(
             "click",
             function () {
 
-                sideMenu.classList.add(
-                    "open"
+                console.log(
+                    "Hamburger menü megnyitása"
                 );
 
-                menuOverlay.classList.add(
-                    "open"
-                );
+                sideMenu.classList.add("open");
+
+                menuOverlay.classList.add("open");
 
             }
         );
@@ -69,259 +79,313 @@ document.addEventListener(
         // MENÜ BEZÁRÁSA
         // =========================================
 
+        function closeSideMenu() {
+
+            sideMenu.classList.remove("open");
+
+            menuOverlay.classList.remove("open");
+
+        }
+
+
+        // X gomb
+
         closeMenu.addEventListener(
             "click",
-            function () {
-
-                sideMenu.classList.remove(
-                    "open"
-                );
-
-                menuOverlay.classList.remove(
-                    "open"
-                );
-
-            }
+            closeSideMenu
         );
 
+
+        // Háttér
 
         menuOverlay.addEventListener(
             "click",
-            function () {
+            closeSideMenu
+        );
 
-                sideMenu.classList.remove(
-                    "open"
-                );
 
-                menuOverlay.classList.remove(
-                    "open"
-                );
+        // ESC billentyű
+
+        document.addEventListener(
+            "keydown",
+            function (event) {
+
+                if (event.key === "Escape") {
+
+                    closeSideMenu();
+
+                }
 
             }
         );
 
 
         // =========================================
-        // BACKEND
+        // MENÜ LINK KATTINTÁS
         // =========================================
 
-        const BACKEND_URL =
-            "https://project-hub-backend-1.onrender.com";
+        const menuLinks =
+            sideMenu.querySelectorAll("a");
 
+        menuLinks.forEach(
+            function (link) {
 
-        // =========================================
-        // AUTH MENÜ ELEMEK
-        // =========================================
+                link.addEventListener(
+                    "click",
+                    function () {
 
-        const loginMenuItem =
-            document.getElementById("loginMenuItem");
+                        if (
+                            link.id !== "logoutButton"
+                        ) {
 
-        const userMenuItem =
-            document.getElementById("userMenuItem");
+                            closeSideMenu();
 
-        const usernameDisplay =
-            document.getElementById("usernameDisplay");
-
-        const logoutButton =
-            document.getElementById("logoutButton");
-
-
-        if (
-            !loginMenuItem ||
-            !userMenuItem ||
-            !usernameDisplay ||
-            !logoutButton
-        ) {
-
-            console.error(
-                "Az auth menü egyik eleme hiányzik."
-            );
-
-            return;
-
-        }
-
-
-        // =========================================
-        // AUTH TOKEN LEKÉRÉSE
-        // =========================================
-
-        function getAuthToken() {
-
-            return localStorage.getItem(
-                "projectHubAuthToken"
-            );
-
-        }
-
-
-        // =========================================
-        // AUTH HEADERS
-        // =========================================
-
-        function getAuthHeaders() {
-
-            const token =
-                getAuthToken();
-
-
-            if (!token) {
-
-                return {};
-
-            }
-
-
-            return {
-
-                Authorization:
-                    "Bearer " +
-                    token
-
-            };
-
-        }
-
-
-        // =========================================
-        // BEJELENTKEZETT FELHASZNÁLÓ ELLENŐRZÉSE
-        // =========================================
-
-        async function checkLogin() {
-
-            try {
-
-                const response =
-                    await fetch(
-                        BACKEND_URL +
-                        "/api/auth/me",
-                        {
-                            method: "GET",
-
-                            headers:
-                                getAuthHeaders(),
-
-                            credentials:
-                                "include"
                         }
-                    );
-
-
-                const result =
-                    await response.json();
-
-
-                console.log(
-                    "Bejelentkezés ellenőrzése:",
-                    result
-                );
-
-
-                if (
-                    response.ok &&
-                    result.success &&
-                    result.user
-                ) {
-
-                    // =========================================
-                    // BEJELENTKEZVE
-                    // =========================================
-
-                    loginMenuItem.style.display =
-                        "none";
-
-                    userMenuItem.style.display =
-                        "flex";
-
-                    logoutButton.style.display =
-                        "flex";
-
-                    usernameDisplay.textContent =
-                        result.user.username;
-
-
-                    console.log(
-                        "Bejelentkezett felhasználó:",
-                        result.user
-                    );
-
-                }
-
-                else {
-
-                    // =========================================
-                    // ÉRVÉNYTELEN TOKEN
-                    // =========================================
-
-                    if (
-                        response.status === 401
-                    ) {
-
-                        localStorage.removeItem(
-                            "projectHubAuthToken"
-                        );
 
                     }
-
-
-                    // =========================================
-                    // KIJELENTKEZVE
-                    // =========================================
-
-                    loginMenuItem.style.display =
-                        "flex";
-
-                    userMenuItem.style.display =
-                        "none";
-
-                    logoutButton.style.display =
-                        "none";
-
-                    usernameDisplay.textContent =
-                        "";
-
-                }
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "Session ellenőrzési hiba:",
-                    error
                 );
 
-
-                // =========================================
-                // HIBA ESETÉN
-                // =========================================
-
-                loginMenuItem.style.display =
-                    "flex";
-
-                userMenuItem.style.display =
-                    "none";
-
-                logoutButton.style.display =
-                    "none";
-
-                usernameDisplay.textContent =
-                    "";
-
             }
+        );
+
+    }
+
+
+    // =========================================
+    // AUTH ELEMEK
+    // =========================================
+
+    const loginMenuItem =
+        document.getElementById("loginMenuItem");
+
+    const userMenuItem =
+        document.getElementById("userMenuItem");
+
+    const usernameDisplay =
+        document.getElementById("usernameDisplay");
+
+    const logoutButton =
+        document.getElementById("logoutButton");
+
+
+    // =========================================
+    // TOKEN LEKÉRÉSE
+    // =========================================
+
+    function getAuthToken() {
+
+        return localStorage.getItem(
+            "projectHubAuthToken"
+        );
+
+    }
+
+
+    // =========================================
+    // AUTH HEADER
+    // =========================================
+
+    function getAuthHeaders() {
+
+        const token =
+            getAuthToken();
+
+        if (!token) {
+
+            return {};
 
         }
 
+        return {
 
-        // =========================================
-        // KIJELENTKEZÉS
-        // =========================================
+            "Authorization":
+                "Bearer " + token
+
+        };
+
+    }
+
+
+    // =========================================
+    // KIJELENTKEZETT ÁLLAPOT
+    // =========================================
+
+    function showLoggedOut() {
+
+        if (loginMenuItem) {
+
+            loginMenuItem.style.display =
+                "flex";
+
+        }
+
+        if (userMenuItem) {
+
+            userMenuItem.style.display =
+                "none";
+
+        }
+
+        if (logoutButton) {
+
+            logoutButton.style.display =
+                "none";
+
+        }
+
+        if (usernameDisplay) {
+
+            usernameDisplay.textContent =
+                "";
+
+        }
+
+    }
+
+
+    // =========================================
+    // BEJELENTKEZETT ÁLLAPOT
+    // =========================================
+
+    function showLoggedIn(username) {
+
+        if (loginMenuItem) {
+
+            loginMenuItem.style.display =
+                "none";
+
+        }
+
+        if (userMenuItem) {
+
+            userMenuItem.style.display =
+                "flex";
+
+        }
+
+        if (logoutButton) {
+
+            logoutButton.style.display =
+                "flex";
+
+        }
+
+        if (usernameDisplay) {
+
+            usernameDisplay.textContent =
+                username;
+
+        }
+
+    }
+
+
+    // =========================================
+    // BEJELENTKEZÉS ELLENŐRZÉSE
+    // =========================================
+
+    async function checkLogin() {
+
+        try {
+
+            const response =
+                await fetch(
+                    BACKEND_URL +
+                    "/api/auth/me",
+                    {
+                        method: "GET",
+
+                        headers:
+                            getAuthHeaders(),
+
+                        credentials:
+                            "include"
+                    }
+                );
+
+
+            const result =
+                await response.json();
+
+
+            console.log(
+                "AUTH ELLENŐRZÉS:",
+                result
+            );
+
+
+            // =====================================
+            // SIKERES BEJELENTKEZÉS
+            // =====================================
+
+            if (
+                response.ok &&
+                result.success &&
+                result.user
+            ) {
+
+                showLoggedIn(
+                    result.user.username
+                );
+
+                console.log(
+                    "Bejelentkezett felhasználó:",
+                    result.user.username
+                );
+
+                return;
+
+            }
+
+
+            // =====================================
+            // ÉRVÉNYTELEN TOKEN
+            // =====================================
+
+            if (
+                response.status === 401
+            ) {
+
+                localStorage.removeItem(
+                    "projectHubAuthToken"
+                );
+
+            }
+
+
+            showLoggedOut();
+
+
+        } catch (error) {
+
+            console.error(
+                "AUTH ELLENŐRZÉSI HIBA:",
+                error
+            );
+
+            showLoggedOut();
+
+        }
+
+    }
+
+
+    // =========================================
+    // KIJELENTKEZÉS
+    // =========================================
+
+    if (logoutButton) {
 
         logoutButton.addEventListener(
             "click",
             async function (event) {
 
                 event.preventDefault();
+
+
+                console.log(
+                    "Kijelentkezés..."
+                );
 
 
                 try {
@@ -347,14 +411,12 @@ document.addEventListener(
 
 
                     console.log(
-                        "Kijelentkezés:",
+                        "Kijelentkezés válasz:",
                         result
                     );
 
 
-                }
-
-                catch (error) {
+                } catch (error) {
 
                     console.error(
                         "Kijelentkezési hiba:",
@@ -364,30 +426,58 @@ document.addEventListener(
                 }
 
 
-                // =========================================
+                // =================================
                 // TOKEN TÖRLÉSE
-                // =========================================
+                // =================================
 
                 localStorage.removeItem(
                     "projectHubAuthToken"
                 );
 
 
-                // =========================================
-                // OLDAL ÚJRATÖLTÉSE
-                // =========================================
+                // =================================
+                // UI FRISSÍTÉSE
+                // =================================
+
+                showLoggedOut();
+
+
+                // =================================
+                // MENÜ BEZÁRÁSA
+                // =================================
+
+                if (
+                    sideMenu &&
+                    menuOverlay
+                ) {
+
+                    sideMenu.classList.remove(
+                        "open"
+                    );
+
+                    menuOverlay.classList.remove(
+                        "open"
+                    );
+
+                }
+
+
+                // =================================
+                // OLDAL FRISSÍTÉSE
+                // =================================
 
                 window.location.reload();
 
             }
         );
 
-
-        // =========================================
-        // INDÍTÁS
-        // =========================================
-
-        checkLogin();
-
     }
-);
+
+
+    // =========================================
+    // INDÍTÁS
+    // =========================================
+
+    checkLogin();
+
+});
