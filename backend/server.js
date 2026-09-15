@@ -17,10 +17,6 @@ const FRONTEND_URL =
 const STEAM_API_KEY =
     process.env.STEAM_API_KEY;
 
-const STEAM_ID =
-    process.env.STEAM_ID ||
-    "76561199059474054";
-
 
 // ======================================================
 // DATABASE
@@ -400,6 +396,91 @@ async function initializeDatabase() {
 
     await pool.query(`
         DELETE FROM auth_tokens
+        WHERE expires_at < CURRENT_TIMESTAMP;
+    `);
+
+
+    // ==================================================
+    // STEAM ACCOUNTS
+    // ==================================================
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS steam_accounts (
+            id SERIAL PRIMARY KEY,
+
+            user_id INTEGER NOT NULL UNIQUE
+                REFERENCES users(id)
+                ON DELETE CASCADE,
+
+            steam_id VARCHAR(32) NOT NULL UNIQUE,
+
+            steam_name TEXT,
+
+            avatar TEXT,
+
+            profile_url TEXT,
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP,
+
+            updated_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+
+
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS
+        steam_accounts_user_id_idx
+        ON steam_accounts(user_id);
+    `);
+
+
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS
+        steam_accounts_steam_id_idx
+        ON steam_accounts(steam_id);
+    `);
+
+
+    // ==================================================
+    // STEAM LINK STATES
+    // ==================================================
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS steam_link_states (
+            id SERIAL PRIMARY KEY,
+
+            user_id INTEGER NOT NULL
+                REFERENCES users(id)
+                ON DELETE CASCADE,
+
+            state_hash TEXT UNIQUE NOT NULL,
+
+            expires_at TIMESTAMP NOT NULL,
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+
+
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS
+        steam_link_states_user_id_idx
+        ON steam_link_states(user_id);
+    `);
+
+
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS
+        steam_link_states_expires_at_idx
+        ON steam_link_states(expires_at);
+    `);
+
+
+    await pool.query(`
+        DELETE FROM steam_link_states
         WHERE expires_at < CURRENT_TIMESTAMP;
     `);
 
@@ -900,6 +981,40 @@ async function getAuthenticatedNotesUser(req) {
 // ======================================================
 
 async function getAuthenticatedTasksUser(req) {
+
+    const bearerToken =
+        getBearerToken(req);
+
+
+    if (!bearerToken) {
+
+        return null;
+
+    }
+
+
+    const user =
+        await getUserFromAuthToken(
+            bearerToken
+        );
+
+
+    if (!user) {
+
+        return null;
+
+    }
+
+
+    return user;
+}
+
+
+// ======================================================
+// STEAM AUTH
+// ======================================================
+
+async function getAuthenticatedSteamUser(req) {
 
     const bearerToken =
         getBearerToken(req);
@@ -2680,22 +2795,6 @@ app.post(
 // ======================================================
 // TASKS - UPDATE
 // ======================================================
-//
-// FONTOS:
-// Ez az endpoint már RÉSZLEGES frissítést is támogat.
-//
-// Például:
-//
-// {
-//     "completed": true
-// }
-//
-// önmagában is működik.
-//
-// A hiányzó mezők értéke az adatbázisban
-// lévő jelenlegi érték marad.
-//
-// ======================================================
 
 app.put(
     "/api/tasks/:id",
@@ -2755,10 +2854,6 @@ app.put(
                 );
 
 
-            // ==================================================
-            // MEGLÉVŐ FELADAT LEKÉRÉSE
-            // ==================================================
-
             const existingResult =
                 await pool.query(
                     `
@@ -2815,10 +2910,6 @@ app.put(
                 existingResult.rows[0];
 
 
-            // ==================================================
-            // MEZŐK ÖSSZEFÉSÜLÉSE
-            // ==================================================
-
             const title =
                 typeof req.body.title ===
                 "string"
@@ -2860,10 +2951,6 @@ app.put(
                     ? req.body.pinned
                     : existingTask.pinned;
 
-
-            // ==================================================
-            // DUE DATE
-            // ==================================================
 
             let dueDate =
                 existingTask.due_date;
@@ -2918,10 +3005,6 @@ app.put(
             }
 
 
-            // ==================================================
-            // VALIDATION
-            // ==================================================
-
             if (!title) {
 
                 return res.status(400).json({
@@ -2935,10 +3018,6 @@ app.put(
 
             }
 
-
-            // ==================================================
-            // UPDATE
-            // ==================================================
 
             const result =
                 await pool.query(
@@ -3182,6 +3261,831 @@ app.delete(
 
 
 // ======================================================
+// STEAM SEGÉDFÜGGVÉNYEK
+// ======================================================
+
+
+// ------------------------------------------------------
+// Steam account lekérése az aktuális Project Hub userhez
+// ------------------------------------------------------
+
+async function getSteamAccountForUser(userId) {
+
+    const result =
+        await pool.query(
+            `
+            SELECT
+                id,
+                user_id,
+                steam_id,
+                steam_name,
+                avatar,
+                profile_url,
+                created_at,
+                updated_at
+
+            FROM steam_accounts
+
+            WHERE user_id = $1
+
+            LIMIT 1
+            `,
+            [
+                userId
+            ]
+        );
+
+
+    if (
+        result.rows.length === 0
+    ) {
+
+        return null;
+
+    }
+
+
+    return result.rows[0];
+}
+
+
+// ------------------------------------------------------
+// Steam API GET
+// ------------------------------------------------------
+
+async function steamApiGet(
+    interfaceName,
+    methodName,
+    version,
+    params
+) {
+
+    if (!STEAM_API_KEY) {
+
+        throw new Error(
+            "A STEAM_API_KEY nincs beállítva."
+        );
+
+    }
+
+
+    const query =
+        new URLSearchParams();
+
+
+    query.set(
+        "key",
+        STEAM_API_KEY
+    );
+
+
+    for (
+        const [key, value]
+        of Object.entries(
+            params || {}
+        )
+    ) {
+
+        if (
+            value !== undefined &&
+            value !== null
+        ) {
+
+            query.set(
+                key,
+                String(value)
+            );
+
+        }
+
+    }
+
+
+    query.set(
+        "format",
+        "json"
+    );
+
+
+    const url =
+        "https://api.steampowered.com/" +
+        encodeURIComponent(interfaceName) +
+        "/" +
+        encodeURIComponent(methodName) +
+        "/" +
+        encodeURIComponent(version) +
+        "/?" +
+        query.toString();
+
+
+    const response =
+        await fetch(url);
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Steam API HTTP hiba: " +
+            response.status
+        );
+
+    }
+
+
+    return await response.json();
+}
+
+
+// ------------------------------------------------------
+// Steam játék kép URL-ek
+// ------------------------------------------------------
+
+function getSteamImageUrls(appId) {
+
+    const id =
+        String(appId);
+
+
+    return {
+
+        icon:
+            "https://media.steampowered.com/steamcommunity/public/images/apps/" +
+            id +
+            "/" +
+            "icon.jpg",
+
+        logo:
+            "https://media.steampowered.com/steamcommunity/public/images/apps/" +
+            id +
+            "/" +
+            "logo.jpg",
+
+        capsule:
+            "https://cdn.cloudflare.steamstatic.com/steam/apps/" +
+            id +
+            "/header.jpg",
+
+        background:
+            "https://cdn.cloudflare.steamstatic.com/steam/apps/" +
+            id +
+            "/page_bg_generated_v6b.jpg"
+
+    };
+
+}
+
+
+// ======================================================
+// STEAM LINK - INDÍTÁS
+// ======================================================
+
+app.get(
+    "/api/steam/link",
+    async function (req, res) {
+
+        try {
+
+            const user =
+                await getAuthenticatedSteamUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges."
+
+                });
+
+            }
+
+
+            const state =
+                crypto
+                    .randomBytes(32)
+                    .toString("hex");
+
+
+            const stateHash =
+                hashAuthToken(
+                    state
+                );
+
+
+            const expiresAt =
+                new Date(
+                    Date.now() +
+                    1000 *
+                    60 *
+                    10
+                );
+
+
+            await pool.query(
+                `
+                DELETE FROM steam_link_states
+                WHERE user_id = $1
+                `,
+                [
+                    user.id
+                ]
+            );
+
+
+            await pool.query(
+                `
+                INSERT INTO steam_link_states (
+                    user_id,
+                    state_hash,
+                    expires_at
+                )
+
+                VALUES (
+                    $1,
+                    $2,
+                    $3
+                )
+                `,
+                [
+                    user.id,
+                    stateHash,
+                    expiresAt
+                ]
+            );
+
+
+            const returnTo =
+                FRONTEND_URL +
+                "/?steam_link=callback";
+
+
+            const steamOpenIdUrl =
+                "https://steamcommunity.com/openid/login?" +
+                new URLSearchParams({
+
+                    "openid.ns":
+                        "http://specs.openid.net/auth/2.0",
+
+                    "openid.mode":
+                        "checkid_setup",
+
+                    "openid.return_to":
+                        returnTo +
+                        "&state=" +
+                        encodeURIComponent(
+                            state
+                        ),
+
+                    "openid.realm":
+                        FRONTEND_URL,
+
+                    "openid.identity":
+                        "http://specs.openid.net/auth/2.0/identifier_select",
+
+                    "openid.claimed_id":
+                        "http://specs.openid.net/auth/2.0/identifier_select"
+
+                }).toString();
+
+
+            return res.json({
+
+                success: true,
+
+                redirectUrl:
+                    steamOpenIdUrl
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "STEAM LINK INDÍTÁSI HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült elindítani a Steam összekapcsolását."
+
+            });
+
+        }
+
+    }
+);
+
+
+// ======================================================
+// STEAM LINK - CALLBACK
+// ======================================================
+//
+// A Steam OpenID után ide érkezünk vissza.
+// A state alapján kötjük össze a Steam fiókot
+// a megfelelő Project Hub userrel.
+//
+// ======================================================
+
+app.get(
+    "/api/steam/callback",
+    async function (req, res) {
+
+        try {
+
+            const state =
+                typeof req.query.state ===
+                "string"
+                    ? req.query.state
+                    : "";
+
+
+            if (!state) {
+
+                return res.redirect(
+                    FRONTEND_URL +
+                    "/?steam_link=error&reason=missing_state"
+                );
+
+            }
+
+
+            const stateHash =
+                hashAuthToken(
+                    state
+                );
+
+
+            const stateResult =
+                await pool.query(
+                    `
+                    SELECT
+                        id,
+                        user_id
+
+                    FROM steam_link_states
+
+                    WHERE
+                        state_hash = $1
+
+                        AND expires_at >
+                            CURRENT_TIMESTAMP
+
+                    LIMIT 1
+                    `,
+                    [
+                        stateHash
+                    ]
+                );
+
+
+            if (
+                stateResult.rows.length === 0
+            ) {
+
+                return res.redirect(
+                    FRONTEND_URL +
+                    "/?steam_link=error&reason=invalid_state"
+                );
+
+            }
+
+
+            const linkState =
+                stateResult.rows[0];
+
+
+            // ==================================================
+            // STEAM OPENID VERIFY
+            // ==================================================
+
+            const verifyParams = {};
+
+
+            for (
+                const [key, value]
+                of Object.entries(
+                    req.query
+                )
+            ) {
+
+                if (
+                    key.startsWith(
+                        "openid."
+                    )
+                ) {
+
+                    verifyParams[key] =
+                        value;
+
+                }
+
+            }
+
+
+            verifyParams[
+                "openid.mode"
+            ] =
+                "check_authentication";
+
+
+            const verifyResponse =
+                await fetch(
+                    "https://steamcommunity.com/openid/login",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/x-www-form-urlencoded"
+                        },
+
+                        body:
+                            new URLSearchParams(
+                                verifyParams
+                            ).toString()
+                    }
+                );
+
+
+            if (!verifyResponse.ok) {
+
+                return res.redirect(
+                    FRONTEND_URL +
+                    "/?steam_link=error&reason=steam_verify_failed"
+                );
+
+            }
+
+
+            const verifyText =
+                await verifyResponse.text();
+
+
+            if (
+                !/is_valid\s*:\s*true/i.test(
+                    verifyText
+                )
+            ) {
+
+                return res.redirect(
+                    FRONTEND_URL +
+                    "/?steam_link=error&reason=invalid_steam_login"
+                );
+
+            }
+
+
+            const claimedId =
+                typeof req.query[
+                    "openid.claimed_id"
+                ] === "string"
+                    ? req.query[
+                        "openid.claimed_id"
+                    ]
+                    : "";
+
+
+            const steamIdMatch =
+                claimedId.match(
+                    /\/id\/(\d+)$/
+                );
+
+
+            if (
+                !steamIdMatch
+            ) {
+
+                return res.redirect(
+                    FRONTEND_URL +
+                    "/?steam_link=error&reason=invalid_steam_id"
+                );
+
+            }
+
+
+            const steamId =
+                steamIdMatch[1];
+
+
+            // ==================================================
+            // STEAM PROFIL LEKÉRÉSE
+            // ==================================================
+
+            let steamProfile = null;
+
+
+            try {
+
+                const profileData =
+                    await steamApiGet(
+                        "ISteamUser",
+                        "GetPlayerSummaries",
+                        "v0002",
+                        {
+                            steamids:
+                                steamId
+                        }
+                    );
+
+
+                steamProfile =
+                    profileData
+                        ?.response
+                        ?.players
+                        ?.[0] ||
+                    null;
+
+            }
+            catch (
+                profileError
+            ) {
+
+                console.error(
+                    "STEAM PROFIL LEKÉRÉSI HIBA:",
+                    profileError
+                );
+
+            }
+
+
+            // ==================================================
+            // STEAM ACCOUNT MENTÉS
+            // ==================================================
+
+            await pool.query(
+                `
+                INSERT INTO steam_accounts (
+                    user_id,
+                    steam_id,
+                    steam_name,
+                    avatar,
+                    profile_url,
+                    updated_at
+                )
+
+                VALUES (
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    CURRENT_TIMESTAMP
+                )
+
+                ON CONFLICT (user_id)
+
+                DO UPDATE SET
+
+                    steam_id =
+                        EXCLUDED.steam_id,
+
+                    steam_name =
+                        EXCLUDED.steam_name,
+
+                    avatar =
+                        EXCLUDED.avatar,
+
+                    profile_url =
+                        EXCLUDED.profile_url,
+
+                    updated_at =
+                        CURRENT_TIMESTAMP
+                `,
+                [
+                    linkState.user_id,
+
+                    steamId,
+
+                    steamProfile
+                        ?.personaname ||
+                        null,
+
+                    steamProfile
+                        ?.avatarfull ||
+                        null,
+
+                    steamProfile
+                        ?.profileurl ||
+                        (
+                            "https://steamcommunity.com/profiles/" +
+                            steamId
+                        )
+                ]
+            );
+
+
+            // ==================================================
+            // STATE FELHASZNÁLVA
+            // ==================================================
+
+            await pool.query(
+                `
+                DELETE FROM steam_link_states
+                WHERE id = $1
+                `,
+                [
+                    linkState.id
+                ]
+            );
+
+
+            return res.redirect(
+                FRONTEND_URL +
+                "/?steam_link=success"
+            );
+
+        }
+        catch (error) {
+
+            console.error(
+                "STEAM CALLBACK HIBA:",
+                error
+            );
+
+
+            return res.redirect(
+                FRONTEND_URL +
+                "/?steam_link=error&reason=server_error"
+            );
+
+        }
+
+    }
+);
+
+
+// ======================================================
+// STEAM ACCOUNT - INFO
+// ======================================================
+
+app.get(
+    "/api/steam/account",
+    async function (req, res) {
+
+        try {
+
+            const user =
+                await getAuthenticatedSteamUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges."
+
+                });
+
+            }
+
+
+            const account =
+                await getSteamAccountForUser(
+                    user.id
+                );
+
+
+            if (!account) {
+
+                return res.json({
+
+                    success: true,
+
+                    connected: false,
+
+                    account: null
+
+                });
+
+            }
+
+
+            return res.json({
+
+                success: true,
+
+                connected: true,
+
+                account: account
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "STEAM ACCOUNT HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült lekérni a Steam kapcsolatot."
+
+            });
+
+        }
+
+    }
+);
+
+
+// ======================================================
+// STEAM ACCOUNT - LEVÁLASZTÁS
+// ======================================================
+
+app.delete(
+    "/api/steam/account",
+    async function (req, res) {
+
+        try {
+
+            const user =
+                await getAuthenticatedSteamUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges."
+
+                });
+
+            }
+
+
+            await pool.query(
+                `
+                DELETE FROM steam_accounts
+                WHERE user_id = $1
+                `,
+                [
+                    user.id
+                ]
+            );
+
+
+            return res.json({
+
+                success: true,
+
+                connected: false,
+
+                message:
+                    "A Steam-fiók leválasztva."
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "STEAM ACCOUNT DELETE HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült leválasztani a Steam-fiókot."
+
+            });
+
+        }
+
+    }
+);
+
+
+// ======================================================
 // STEAM GAMES
 // ======================================================
 
@@ -3190,6 +4094,26 @@ app.get(
     async function (req, res) {
 
         try {
+
+            const user =
+                await getAuthenticatedSteamUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges."
+
+                });
+
+            }
+
 
             if (!STEAM_API_KEY) {
 
@@ -3205,34 +4129,23 @@ app.get(
             }
 
 
-            const url =
-                "https://api.steampowered.com/" +
-                "IPlayerService/GetOwnedGames/v0001/" +
-                "?key=" +
-                encodeURIComponent(
-                    STEAM_API_KEY
-                ) +
-                "&steamid=" +
-                encodeURIComponent(
-                    STEAM_ID
-                ) +
-                "&format=json" +
-                "&include_appinfo=1" +
-                "&include_played_free_games=1";
+            const account =
+                await getSteamAccountForUser(
+                    user.id
+                );
 
 
-            const response =
-                await fetch(url);
+            if (!account) {
 
+                return res.json({
 
-            if (!response.ok) {
+                    success: true,
 
-                return res.status(502).json({
+                    connected: false,
 
-                    success: false,
+                    gameCount: 0,
 
-                    message:
-                        "A Steam API nem elérhető."
+                    games: []
 
                 });
 
@@ -3240,7 +4153,21 @@ app.get(
 
 
             const data =
-                await response.json();
+                await steamApiGet(
+                    "IPlayerService",
+                    "GetOwnedGames",
+                    "v0001",
+                    {
+                        steamid:
+                            account.steam_id,
+
+                        include_appinfo:
+                            1,
+
+                        include_played_free_games:
+                            1
+                    }
+                );
 
 
             const games =
@@ -3260,18 +4187,87 @@ app.get(
             );
 
 
+            const formattedGames =
+                games.map(
+                    function (game) {
+
+                        const images =
+                            getSteamImageUrls(
+                                game.appid
+                            );
+
+
+                        return {
+
+                            appid:
+                                game.appid,
+
+                            name:
+                                game.name ||
+                                "Ismeretlen játék",
+
+                            playtimeForever:
+                                game.playtime_forever ||
+                                0,
+
+                            playtimeForeverHours:
+                                Math.round(
+                                    (
+                                        game.playtime_forever ||
+                                        0
+                                    ) /
+                                    60 *
+                                    10
+                                ) / 10,
+
+                            playtime2Weeks:
+                                game.playtime_2weeks ||
+                                0,
+
+                            playtime2WeeksHours:
+                                Math.round(
+                                    (
+                                        game.playtime_2weeks ||
+                                        0
+                                    ) /
+                                    60 *
+                                    10
+                                ) / 10,
+
+                            imgIconUrl:
+                                game.img_icon_url ||
+                                null,
+
+                            imgLogoUrl:
+                                game.img_logo_url ||
+                                null,
+
+                            images:
+                                images
+
+                        };
+
+                    }
+                );
+
+
             return res.json({
 
                 success: true,
 
+                connected: true,
+
                 steamId:
-                    STEAM_ID,
+                    account.steam_id,
+
+                steamName:
+                    account.steam_name,
 
                 gameCount:
-                    games.length,
+                    formattedGames.length,
 
                 games:
-                    games
+                    formattedGames
 
             });
 
@@ -3279,7 +4275,7 @@ app.get(
         catch (error) {
 
             console.error(
-                "STEAM API HIBA:",
+                "STEAM GAMES HIBA:",
                 error
             );
 
@@ -3290,6 +4286,665 @@ app.get(
 
                 message:
                     "Nem sikerült lekérni a Steam játékokat."
+
+            });
+
+        }
+
+    }
+);
+
+
+// ======================================================
+// STEAM GAME DETAILS + ACHIEVEMENTS
+// ======================================================
+
+app.get(
+    "/api/steam/game/:appid",
+    async function (req, res) {
+
+        try {
+
+            const user =
+                await getAuthenticatedSteamUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges."
+
+                });
+
+            }
+
+
+            if (!STEAM_API_KEY) {
+
+                return res.status(500).json({
+
+                    success: false,
+
+                    message:
+                        "A STEAM_API_KEY nincs beállítva."
+
+                });
+
+            }
+
+
+            const appId =
+                Number(
+                    req.params.appid
+                );
+
+
+            if (
+                !Number.isInteger(appId) ||
+                appId <= 0
+            ) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "Érvénytelen Steam AppID."
+
+                });
+
+            }
+
+
+            const account =
+                await getSteamAccountForUser(
+                    user.id
+                );
+
+
+            if (!account) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    connected: false,
+
+                    message:
+                        "Nincs Steam-fiók összekötve."
+
+                });
+
+            }
+
+
+            // ==================================================
+            // JÁTÉKLISTÁBÓL KERESSÜK KI
+            // ==================================================
+
+            const ownedGamesData =
+                await steamApiGet(
+                    "IPlayerService",
+                    "GetOwnedGames",
+                    "v0001",
+                    {
+                        steamid:
+                            account.steam_id,
+
+                        include_appinfo:
+                            1,
+
+                        include_played_free_games:
+                            1
+                    }
+                );
+
+
+            const games =
+                ownedGamesData
+                    ?.response
+                    ?.games ||
+                [];
+
+
+            const game =
+                games.find(
+                    function (item) {
+
+                        return (
+                            Number(
+                                item.appid
+                            ) === appId
+                        );
+
+                    }
+                );
+
+
+            if (!game) {
+
+                return res.status(404).json({
+
+                    success: false,
+
+                    message:
+                        "Ez a játék nem található a Steam könyvtáradban."
+
+                });
+
+            }
+
+
+            const images =
+                getSteamImageUrls(
+                    appId
+                );
+
+
+            // ==================================================
+            // ACHIEVEMENTEK
+            // ==================================================
+
+            let achievementData =
+                null;
+
+
+            let achievements = [];
+
+
+            let achievementStats = {
+
+                unlocked:
+                    0,
+
+                total:
+                    0,
+
+                percentage:
+                    0
+
+            };
+
+
+            try {
+
+                achievementData =
+                    await steamApiGet(
+                        "ISteamUserStats",
+                        "GetPlayerAchievements",
+                        "v0001",
+                        {
+                            steamid:
+                                account.steam_id,
+
+                            appid:
+                                appId,
+
+                            l:
+                                "english"
+                        }
+                    );
+
+
+                const rawAchievements =
+                    achievementData
+                        ?.playerstats
+                        ?.achievements ||
+                    [];
+
+
+                achievements =
+                    rawAchievements.map(
+                        function (
+                            achievement
+                        ) {
+
+                            return {
+
+                                apiname:
+                                    achievement.apiname,
+
+                                name:
+                                    achievement.name ||
+                                    achievement.apiname,
+
+                                description:
+                                    achievement.description ||
+                                    "",
+
+                                achieved:
+                                    achievement.achieved === 1,
+
+                                unlocktime:
+                                    achievement.unlocktime ||
+                                    0
+
+                            };
+
+                        }
+                    );
+
+
+                achievementStats.total =
+                    achievements.length;
+
+
+                achievementStats.unlocked =
+                    achievements.filter(
+                        function (
+                            achievement
+                        ) {
+
+                            return achievement.achieved;
+
+                        }
+                    ).length;
+
+
+                if (
+                    achievementStats.total >
+                    0
+                ) {
+
+                    achievementStats.percentage =
+                        Math.round(
+                            (
+                                achievementStats.unlocked /
+                                achievementStats.total
+                            ) *
+                            100
+                        );
+
+                }
+
+            }
+            catch (
+                achievementError
+            ) {
+
+                console.error(
+                    "STEAM ACHIEVEMENT HIBA:",
+                    achievementError
+                );
+
+            }
+
+
+            return res.json({
+
+                success: true,
+
+                connected: true,
+
+                game: {
+
+                    appid:
+                        game.appid,
+
+                    name:
+                        game.name,
+
+                    playtimeForever:
+                        game.playtime_forever ||
+                        0,
+
+                    playtimeForeverHours:
+                        Math.round(
+                            (
+                                game.playtime_forever ||
+                                0
+                            ) /
+                            60 *
+                            10
+                        ) / 10,
+
+                    playtime2Weeks:
+                        game.playtime_2weeks ||
+                        0,
+
+                    playtime2WeeksHours:
+                        Math.round(
+                            (
+                                game.playtime_2weeks ||
+                                0
+                            ) /
+                            60 *
+                            10
+                        ) / 10,
+
+                    images:
+                        images
+
+                },
+
+                achievements:
+                    achievements,
+
+                achievementStats:
+                    achievementStats
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "STEAM GAME DETAILS HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült lekérni a játék adatait."
+
+            });
+
+        }
+
+    }
+);
+
+
+// ======================================================
+// STEAM PROFILE
+// ======================================================
+
+app.get(
+    "/api/steam/profile",
+    async function (req, res) {
+
+        try {
+
+            const user =
+                await getAuthenticatedSteamUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges."
+
+                });
+
+            }
+
+
+            const account =
+                await getSteamAccountForUser(
+                    user.id
+                );
+
+
+            if (!account) {
+
+                return res.json({
+
+                    success: true,
+
+                    connected: false,
+
+                    profile: null
+
+                });
+
+            }
+
+
+            const data =
+                await steamApiGet(
+                    "ISteamUser",
+                    "GetPlayerSummaries",
+                    "v0002",
+                    {
+                        steamids:
+                            account.steam_id
+                    }
+                );
+
+
+            const profile =
+                data
+                    ?.response
+                    ?.players
+                    ?.[0] ||
+                null;
+
+
+            if (!profile) {
+
+                return res.status(404).json({
+
+                    success: false,
+
+                    message:
+                        "A Steam profil nem található."
+
+                });
+
+            }
+
+
+            return res.json({
+
+                success: true,
+
+                connected: true,
+
+                profile: {
+
+                    steamId:
+                        profile.steamid,
+
+                    name:
+                        profile.personaname,
+
+                    profileUrl:
+                        profile.profileurl,
+
+                    avatar:
+                        profile.avatarfull ||
+                        profile.avatarmedium ||
+                        profile.avatar,
+
+                    personaState:
+                        profile.personastate,
+
+                    gameName:
+                        profile.gameextrainfo ||
+                        null,
+
+                    gameId:
+                        profile.gameid ||
+                        null,
+
+                    created:
+                        profile.timecreated ||
+                        null
+
+                }
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "STEAM PROFILE HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült lekérni a Steam profilt."
+
+            });
+
+        }
+
+    }
+);
+
+
+// ======================================================
+// STEAM RECENT GAMES
+// ======================================================
+
+app.get(
+    "/api/steam/recent",
+    async function (req, res) {
+
+        try {
+
+            const user =
+                await getAuthenticatedSteamUser(
+                    req
+                );
+
+
+            if (!user) {
+
+                return res.status(401).json({
+
+                    success: false,
+
+                    message:
+                        "Érvényes bejelentkezés szükséges."
+
+                });
+
+            }
+
+
+            const account =
+                await getSteamAccountForUser(
+                    user.id
+                );
+
+
+            if (!account) {
+
+                return res.json({
+
+                    success: true,
+
+                    connected: false,
+
+                    games: []
+
+                });
+
+            }
+
+
+            const data =
+                await steamApiGet(
+                    "IPlayerService",
+                    "GetRecentlyPlayedGames",
+                    "v0001",
+                    {
+                        steamid:
+                            account.steam_id,
+
+                        format:
+                            "json"
+                    }
+                );
+
+
+            const games =
+                data
+                    ?.response
+                    ?.games ||
+                [];
+
+
+            const formattedGames =
+                games.map(
+                    function (game) {
+
+                        return {
+
+                            appid:
+                                game.appid,
+
+                            name:
+                                game.name,
+
+                            playtime2Weeks:
+                                game.playtime_2weeks ||
+                                0,
+
+                            playtime2WeeksHours:
+                                Math.round(
+                                    (
+                                        game.playtime_2weeks ||
+                                        0
+                                    ) /
+                                    60 *
+                                    10
+                                ) / 10,
+
+                            playtimeForever:
+                                game.playtime_forever ||
+                                0,
+
+                            images:
+                                getSteamImageUrls(
+                                    game.appid
+                                )
+
+                        };
+
+                    }
+                );
+
+
+            return res.json({
+
+                success: true,
+
+                connected: true,
+
+                games:
+                    formattedGames
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "STEAM RECENT HIBA:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült lekérni a legutóbb játszott játékokat."
 
             });
 
