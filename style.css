@@ -1,4 +1,38 @@
 /* =========================
+   IDEIGLENES GITHUB TESZT GOMB
+   RELEASE ELŐTT TÖRLENDŐ
+========================= */
+
+.test-github-button {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+
+    margin-top: 20px;
+    padding: 14px;
+
+    background: #20242e;
+
+    border: 1px solid #343946;
+    border-radius: 14px;
+
+    color: #ffffff;
+
+    font-size: 13px;
+    font-weight: bold;
+
+    text-decoration: none;
+
+    transition: 0.2s;
+}
+
+.test-github-button:active {
+    transform: scale(0.98);
+}
+/* =========================
    ALAPOK
 ========================= */
 
