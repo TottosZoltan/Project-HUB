@@ -17,6 +17,73 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =========================================
+    // LOGIN OLDAL
+    // =========================================
+
+    const LOGIN_PAGE =
+        "pages/auth/login.html";
+
+
+    // =========================================
+    // APP VÉDELEM
+    // =========================================
+    //
+    // Az index.html alapból rejtve van.
+    // Csak sikeres auth ellenőrzés után
+    // kapja meg az "authenticated" class-t.
+    //
+
+    function unlockApp() {
+
+        document.body.classList.add(
+            "authenticated"
+        );
+
+    }
+
+
+    // =========================================
+    // LOGINRA IRÁNYÍTÁS
+    // =========================================
+
+    function redirectToLogin(message) {
+
+        console.log(
+            "Nincs érvényes bejelentkezés."
+        );
+
+        // App lezárása
+        document.body.classList.remove(
+            "authenticated"
+        );
+
+
+        // Ha van üzenet, eltároljuk.
+        // A login oldal később ki tudja írni.
+        if (message) {
+
+            sessionStorage.setItem(
+                "projectHubAuthMessage",
+                message
+            );
+
+        }
+
+
+        // Token törlése
+        localStorage.removeItem(
+            "projectHubAuthToken"
+        );
+
+
+        // Átirányítás
+        window.location.href =
+            LOGIN_PAGE;
+
+    }
+
+
+    // =========================================
     // MENÜ ELEMEK
     // =========================================
 
@@ -175,7 +242,9 @@ document.addEventListener("DOMContentLoaded", function () {
     function showToast(message) {
 
         const oldToast =
-            document.getElementById("projectHubToast");
+            document.getElementById(
+                "projectHubToast"
+            );
 
         if (oldToast) {
 
@@ -249,8 +318,6 @@ document.addEventListener("DOMContentLoaded", function () {
         document.body.appendChild(toast);
 
 
-        // Megjelenés
-
         requestAnimationFrame(
             function () {
 
@@ -263,8 +330,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         );
 
-
-        // Eltüntetés
 
         setTimeout(
             function () {
@@ -400,6 +465,35 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function checkLogin() {
 
+        const token =
+            getAuthToken();
+
+
+        // =========================================
+        // NINCS TOKEN
+        // =========================================
+
+        if (!token) {
+
+            console.log(
+                "Nincs auth token."
+            );
+
+            showLoggedOut();
+
+            redirectToLogin(
+                "🔐 A Project Hub használatához be kell jelentkezned."
+            );
+
+            return;
+
+        }
+
+
+        // =========================================
+        // TOKEN ELLENŐRZÉSE
+        // =========================================
+
         try {
 
             const response =
@@ -418,8 +512,27 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
 
 
-            const result =
-                await response.json();
+            let result;
+
+            try {
+
+                result =
+                    await response.json();
+
+            } catch (jsonError) {
+
+                console.error(
+                    "A backend nem JSON választ küldött:",
+                    jsonError
+                );
+
+                redirectToLogin(
+                    "⚠️ A munkamenetet nem sikerült ellenőrizni. Kérlek jelentkezz be újra."
+                );
+
+                return;
+
+            }
 
 
             console.log(
@@ -428,9 +541,9 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-            // =====================================
+            // =========================================
             // SIKERES BEJELENTKEZÉS
-            // =====================================
+            // =========================================
 
             if (
                 response.ok &&
@@ -438,13 +551,43 @@ document.addEventListener("DOMContentLoaded", function () {
                 result.user
             ) {
 
+                console.log(
+                    "Bejelentkezett felhasználó:",
+                    result.user.username
+                );
+
+
                 showLoggedIn(
                     result.user.username
                 );
 
+
+                // =====================================
+                // APP FELoldása
+                // =====================================
+
+                unlockApp();
+
+
+                return;
+
+            }
+
+
+            // =========================================
+            // ÉRVÉNYTELEN TOKEN
+            // =========================================
+
+            if (
+                response.status === 401
+            ) {
+
                 console.log(
-                    "Bejelentkezett felhasználó:",
-                    result.user.username
+                    "Az auth token érvénytelen vagy lejárt."
+                );
+
+                redirectToLogin(
+                    "🔐 A munkameneted lejárt. Kérlek jelentkezz be újra."
                 );
 
                 return;
@@ -452,23 +595,13 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
 
-            // =====================================
-            // ÉRVÉNYTELEN TOKEN
-            // =====================================
+            // =========================================
+            // EGYÉB AUTH HIBA
+            // =========================================
 
-            if (
-                response.status === 401
-            ) {
-
-                localStorage.removeItem(
-                    "projectHubAuthToken"
-                );
-
-            }
-
-
-            showLoggedOut();
-
+            redirectToLogin(
+                "🔐 A Project Hub használatához be kell jelentkezned."
+            );
 
         } catch (error) {
 
@@ -477,7 +610,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 error
             );
 
-            showLoggedOut();
+
+            redirectToLogin(
+                "⚠️ A munkamenetet nem sikerült ellenőrizni. Kérlek jelentkezz be újra."
+            );
 
         }
 
@@ -502,6 +638,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
 
 
+                // =====================================
+                // TOKEN MENTÉSE A KIJELENTKEZÉS ELŐTT
+                // =====================================
+
+                const authHeaders =
+                    getAuthHeaders();
+
+
                 try {
 
                     const response =
@@ -512,7 +656,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 method: "POST",
 
                                 headers:
-                                    getAuthHeaders(),
+                                    authHeaders,
 
                                 credentials:
                                     "include"
@@ -520,8 +664,21 @@ document.addEventListener("DOMContentLoaded", function () {
                         );
 
 
-                    const result =
-                        await response.json();
+                    let result;
+
+                    try {
+
+                        result =
+                            await response.json();
+
+                    } catch (jsonError) {
+
+                        console.error(
+                            "Logout válasz feldolgozási hiba:",
+                            jsonError
+                        );
+
+                    }
 
 
                     console.log(
@@ -540,25 +697,34 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
 
-                // =================================
+                // =====================================
                 // TOKEN TÖRLÉSE
-                // =================================
+                // =====================================
 
                 localStorage.removeItem(
                     "projectHubAuthToken"
                 );
 
 
-                // =================================
+                // =====================================
                 // UI FRISSÍTÉSE
-                // =================================
+                // =====================================
 
                 showLoggedOut();
 
 
-                // =================================
+                // =====================================
+                // APP ZÁROLÁSA
+                // =====================================
+
+                document.body.classList.remove(
+                    "authenticated"
+                );
+
+
+                // =====================================
                 // MENÜ BEZÁRÁSA
-                // =================================
+                // =====================================
 
                 if (
                     sideMenu &&
@@ -576,27 +742,22 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
 
-                // =================================
-                // VISSZAJELZÉS
-                // =================================
+                // =====================================
+                // KIJELENTKEZÉSI ÜZENET
+                // =====================================
 
-                showToast(
+                sessionStorage.setItem(
+                    "projectHubAuthMessage",
                     "✅ Sikeresen kijelentkeztél!"
                 );
 
 
-                // =================================
-                // OLDAL FRISSÍTÉSE
-                // =================================
+                // =====================================
+                // LOGIN OLDAL
+                // =====================================
 
-                setTimeout(
-                    function () {
-
-                        window.location.reload();
-
-                    },
-                    1000
-                );
+                window.location.href =
+                    LOGIN_PAGE;
 
             }
         );
