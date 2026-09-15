@@ -61,7 +61,7 @@ app.use(
     cors({
 
         origin:
-            "https://totti-gamer.github.io",
+            "https://tottoszoltan.github.io",
 
         credentials:
             true
