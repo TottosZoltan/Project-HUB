@@ -848,17 +848,29 @@ saveNoteButton.addEventListener(
 
         noteTitle.value = "";
 
-        noteText.value = "";
+noteText.value = "";
 
-        noteCategory.value =
-            "Egyéb";
+noteCategory.value =
+    "Egyéb";
 
 
-        // ==============================
-        // LISTA FRISSÍTÉSE
-        // ==============================
+// ==============================
+// HOZZÁADÓ PANEL BEZÁRÁSA
+// ==============================
 
-        renderNotes();
+noteEditor.classList.remove(
+    "open"
+);
+
+toggleNoteEditor.textContent =
+    "➕ Új jegyzet";
+
+
+// ==============================
+// LISTA FRISSÍTÉSE
+// ==============================
+
+renderNotes();
 
     }
 );
