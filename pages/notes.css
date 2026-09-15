@@ -1055,3 +1055,119 @@ body.note-modal-open {
     }
 
 }
+/* =========================================
+   ÖSSZECSUKHATÓ MODULOK
+========================================= */
+
+.module-actions {
+
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 10px;
+
+    width: 100%;
+
+    margin-bottom: 14px;
+
+    box-sizing: border-box;
+}
+
+
+.module-toggle-button {
+
+    width: 100%;
+
+    padding: 13px 12px;
+
+    border: 1px solid #292d38;
+
+    border-radius: 12px;
+
+    background: #151820;
+
+    color: #ffffff;
+
+    font-size: 13px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.15s ease;
+}
+
+
+.module-toggle-button:hover {
+
+    background: #1b1f28;
+
+    border-color: #383e4b;
+}
+
+
+.module-toggle-button:active {
+
+    transform: scale(0.98);
+}
+
+
+/* =========================================
+   ÖSSZECSUKHATÓ PANEL
+========================================= */
+
+.collapsible-panel {
+
+    display: none;
+}
+
+
+.collapsible-panel.open {
+
+    display: flex;
+
+    animation:
+        panelOpen 0.2s ease;
+}
+
+
+@keyframes panelOpen {
+
+    from {
+
+        opacity: 0;
+
+        transform: translateY(-5px);
+
+    }
+
+    to {
+
+        opacity: 1;
+
+        transform: translateY(0);
+
+    }
+
+}
+
+
+/* =========================================
+   MOBIL
+========================================= */
+
+@media (max-width: 500px) {
+
+    .module-actions {
+
+        grid-template-columns: 1fr;
+
+        gap: 8px;
+
+    }
+
+}
