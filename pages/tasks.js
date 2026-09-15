@@ -49,6 +49,31 @@ const taskSort =
 
 
 // =========================================
+// ÖSSZECSUKHATÓ PANEL ELEMEK
+// =========================================
+
+const toggleTaskEditor =
+    document.getElementById(
+        "toggleTaskEditor"
+    );
+
+const toggleTaskFilters =
+    document.getElementById(
+        "toggleTaskFilters"
+    );
+
+const taskEditor =
+    document.getElementById(
+        "taskEditor"
+    );
+
+const taskFilters =
+    document.getElementById(
+        "taskFilters"
+    );
+
+
+// =========================================
 // STATISZTIKA
 // =========================================
 
@@ -88,14 +113,17 @@ tasks = tasks.map(function (task) {
 
     return {
 
-        id: task.id || Date.now(),
+        id:
+            task.id ||
+            Date.now(),
 
         title:
             task.title ||
             "Névtelen feladat",
 
         description:
-            task.description || "",
+            task.description ||
+            "",
 
         priority:
             task.priority ||
@@ -112,7 +140,8 @@ tasks = tasks.map(function (task) {
             task.pinned === true,
 
         date:
-            task.date || ""
+            task.date ||
+            ""
 
     };
 
@@ -157,7 +186,8 @@ function getPriorityName(priority) {
 
     };
 
-    return names[priority] || "Normál";
+    return names[priority] ||
+        "Normál";
 
 }
 
@@ -178,7 +208,8 @@ function getPriorityIcon(priority) {
 
     };
 
-    return icons[priority] || "🟡";
+    return icons[priority] ||
+        "🟡";
 
 }
 
@@ -203,7 +234,8 @@ function getCategoryIcon(category) {
 
     };
 
-    return icons[category] || "📁";
+    return icons[category] ||
+        "📁";
 
 }
 
@@ -397,14 +429,21 @@ function getFilteredTasks() {
 
     else {
 
-        // Alapértelmezett:
-        // aktív először,
-        // utána prioritás,
-        // majd legújabb.
+        // =====================================
+        // ALAPÉRTELMEZETT
+        // =====================================
+        //
+        // 1. Aktív feladatok
+        // 2. Rögzített feladatok
+        // 3. Prioritás
+        // 4. Legújabb
+
 
         filteredTasks.sort(
             function (a, b) {
 
+
+                // AKTÍV ELŐRE
 
                 if (
                     a.completed !==
@@ -418,6 +457,8 @@ function getFilteredTasks() {
                 }
 
 
+                // RÖGZÍTETT ELŐRE
+
                 if (
                     a.pinned !==
                     b.pinned
@@ -429,6 +470,8 @@ function getFilteredTasks() {
 
                 }
 
+
+                // PRIORITÁS
 
                 const priorityDifference =
 
@@ -445,6 +488,8 @@ function getFilteredTasks() {
                 }
 
 
+                // LEGÚJABB
+
                 return Number(b.id) -
                     Number(a.id);
 
@@ -455,10 +500,12 @@ function getFilteredTasks() {
 
 
     // =========================================
-    // FONTOS / RÖGZÍTETT ELŐRE
+    // RÖGZÍTETT FELADATOK ELŐRE
     // =========================================
 
-    if (sortValue !== "default") {
+    if (
+        sortValue !== "default"
+    ) {
 
         filteredTasks.sort(
             function (a, b) {
@@ -602,7 +649,9 @@ function renderTasks() {
     // NINCS FELADAT
     // =========================================
 
-    if (tasks.length === 0) {
+    if (
+        tasks.length === 0
+    ) {
 
         emptyTasks.style.display =
             "block";
@@ -623,7 +672,9 @@ function renderTasks() {
     // NINCS TALÁLAT
     // =========================================
 
-    if (filteredTasks.length === 0) {
+    if (
+        filteredTasks.length === 0
+    ) {
 
         noTaskResults.style.display =
             "block";
@@ -650,13 +701,17 @@ function renderTasks() {
             // =================================
 
             const taskCard =
-                document.createElement("article");
+                document.createElement(
+                    "article"
+                );
 
             taskCard.className =
                 "task-card";
 
 
-            if (task.completed) {
+            if (
+                task.completed
+            ) {
 
                 taskCard.classList.add(
                     "task-completed"
@@ -665,7 +720,9 @@ function renderTasks() {
             }
 
 
-            if (task.pinned) {
+            if (
+                task.pinned
+            ) {
 
                 taskCard.classList.add(
                     "task-pinned"
@@ -679,18 +736,22 @@ function renderTasks() {
             // =================================
 
             const taskHeader =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
 
             taskHeader.className =
                 "task-card-header";
 
 
             // =================================
-            // BAL OLDAL
+            // BAL OLDALI RÉSZ
             // =================================
 
             const taskMain =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
 
             taskMain.className =
                 "task-main";
@@ -701,7 +762,9 @@ function renderTasks() {
             // =================================
 
             const checkbox =
-                document.createElement("button");
+                document.createElement(
+                    "button"
+                );
 
             checkbox.className =
                 "task-checkbox";
@@ -742,18 +805,22 @@ function renderTasks() {
             // =================================
 
             const title =
-                document.createElement("h3");
+                document.createElement(
+                    "h3"
+                );
 
             title.textContent =
                 task.title;
 
 
             // =================================
-            // CÍM TERÜLET
+            // CÍM + PIN
             // =================================
 
             const titleWrapper =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
 
             titleWrapper.className =
                 "task-title-wrapper";
@@ -764,10 +831,14 @@ function renderTasks() {
             );
 
 
-            if (task.pinned) {
+            if (
+                task.pinned
+            ) {
 
                 const pin =
-                    document.createElement("span");
+                    document.createElement(
+                        "span"
+                    );
 
                 pin.className =
                     "task-pin";
@@ -799,18 +870,22 @@ function renderTasks() {
             // =================================
 
             const taskButtons =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
 
             taskButtons.className =
                 "task-buttons";
 
 
             // =================================
-            // PIN
+            // PIN GOMB
             // =================================
 
             const pinButton =
-                document.createElement("button");
+                document.createElement(
+                    "button"
+                );
 
             pinButton.className =
                 "task-pin-button";
@@ -844,11 +919,13 @@ function renderTasks() {
 
 
             // =================================
-            // SZERKESZTÉS
+            // SZERKESZTÉS GOMB
             // =================================
 
             const editButton =
-                document.createElement("button");
+                document.createElement(
+                    "button"
+                );
 
             editButton.className =
                 "edit-task";
@@ -878,11 +955,13 @@ function renderTasks() {
 
 
             // =================================
-            // TÖRLÉS
+            // TÖRLÉS GOMB
             // =================================
 
             const deleteButton =
-                document.createElement("button");
+                document.createElement(
+                    "button"
+                );
 
             deleteButton.className =
                 "delete-task";
@@ -911,6 +990,10 @@ function renderTasks() {
             );
 
 
+            // =================================
+            // GOMBOK HOZZÁADÁSA
+            // =================================
+
             taskButtons.appendChild(
                 pinButton
             );
@@ -925,7 +1008,7 @@ function renderTasks() {
 
 
             // =================================
-            // FEJLÉC
+            // FEJLÉC ÖSSZEÁLLÍTÁSA
             // =================================
 
             taskHeader.appendChild(
@@ -938,20 +1021,26 @@ function renderTasks() {
 
 
             // =================================
-            // META
+            // META ADATOK
             // =================================
 
             const taskMeta =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
 
             taskMeta.className =
                 "task-meta";
 
 
+            // =================================
             // PRIORITÁS
+            // =================================
 
             const priority =
-                document.createElement("span");
+                document.createElement(
+                    "span"
+                );
 
             priority.className =
                 `task-priority priority-${task.priority}`;
@@ -960,10 +1049,14 @@ function renderTasks() {
                 `${getPriorityIcon(task.priority)} ${getPriorityName(task.priority)}`;
 
 
+            // =================================
             // KATEGÓRIA
+            // =================================
 
             const category =
-                document.createElement("span");
+                document.createElement(
+                    "span"
+                );
 
             category.className =
                 "task-category";
@@ -985,23 +1078,23 @@ function renderTasks() {
             // LEÍRÁS
             // =================================
 
+            let description = null;
+
+
             if (
                 task.description.trim() !== ""
             ) {
 
-                const description =
-                    document.createElement("p");
+                description =
+                    document.createElement(
+                        "p"
+                    );
 
                 description.className =
                     "task-description";
 
                 description.textContent =
                     task.description;
-
-
-                taskCard.appendChild(
-                    description
-                );
 
             }
 
@@ -1011,7 +1104,9 @@ function renderTasks() {
             // =================================
 
             const date =
-                document.createElement("small");
+                document.createElement(
+                    "small"
+                );
 
             date.className =
                 "task-date";
@@ -1021,7 +1116,7 @@ function renderTasks() {
 
 
             // =================================
-            // ÖSSZEÁLLÍTÁS
+            // KÁRTYA ÖSSZEÁLLÍTÁSA
             // =================================
 
             taskCard.appendChild(
@@ -1034,10 +1129,12 @@ function renderTasks() {
 
 
             if (
-                task.description.trim() !== ""
+                description
             ) {
 
-                // A leírás már hozzá lett adva.
+                taskCard.appendChild(
+                    description
+                );
 
             }
 
@@ -1048,7 +1145,7 @@ function renderTasks() {
 
 
             // =================================
-            // KATTINTÁS
+            // KÁRTYA KATTINTÁS
             // =================================
 
             taskCard.addEventListener(
@@ -1099,7 +1196,9 @@ saveTaskButton.addEventListener(
         // ELLENŐRZÉS
         // =====================================
 
-        if (title === "") {
+        if (
+            title === ""
+        ) {
 
             alert(
                 "Kérlek add meg a feladat nevét!"
@@ -1120,7 +1219,6 @@ saveTaskButton.addEventListener(
             editingTaskId !== null
         ) {
 
-
             tasks =
                 tasks.map(
                     function (task) {
@@ -1133,9 +1231,11 @@ saveTaskButton.addEventListener(
 
                             return {
 
-                                id: task.id,
+                                id:
+                                    task.id,
 
-                                title: title,
+                                title:
+                                    title,
 
                                 description:
                                     description,
@@ -1185,12 +1285,13 @@ saveTaskButton.addEventListener(
 
         else {
 
-
             const newTask = {
 
-                id: Date.now(),
+                id:
+                    Date.now(),
 
-                title: title,
+                title:
+                    title,
 
                 description:
                     description,
@@ -1234,9 +1335,11 @@ saveTaskButton.addEventListener(
         // MEZŐK ÜRÍTÉSE
         // =====================================
 
-        taskTitle.value = "";
+        taskTitle.value =
+            "";
 
-        taskDescription.value = "";
+        taskDescription.value =
+            "";
 
         taskPriority.value =
             "normal";
@@ -1246,7 +1349,32 @@ saveTaskButton.addEventListener(
 
 
         // =====================================
-        // FRISSÍTÉS
+        // PANEL BEZÁRÁSA
+        // =====================================
+
+        if (
+            taskEditor
+        ) {
+
+            taskEditor.classList.remove(
+                "open"
+            );
+
+        }
+
+
+        if (
+            toggleTaskEditor
+        ) {
+
+            toggleTaskEditor.textContent =
+                "➕ Új feladat";
+
+        }
+
+
+        // =====================================
+        // LISTA FRISSÍTÉSE
         // =====================================
 
         renderTasks();
@@ -1341,7 +1469,6 @@ function toggleTaskPin(id) {
 
 function editTask(id) {
 
-
     const task =
         tasks.find(
             function (item) {
@@ -1380,6 +1507,35 @@ function editTask(id) {
         "💾 Módosítás mentése";
 
 
+    // =====================================
+    // SZERKESZTÉS PANEL MEGNYITÁSA
+    // =====================================
+
+    if (
+        taskEditor
+    ) {
+
+        taskEditor.classList.add(
+            "open"
+        );
+
+    }
+
+
+    if (
+        toggleTaskEditor
+    ) {
+
+        toggleTaskEditor.textContent =
+            "➖ Új feladat";
+
+    }
+
+
+    // =====================================
+    // OLDAL TETEJÉRE
+    // =====================================
+
     window.scrollTo({
 
         top: 0,
@@ -1387,6 +1543,20 @@ function editTask(id) {
         behavior: "smooth"
 
     });
+
+
+    // =====================================
+    // CÍM MEZŐ FÓKUSZ
+    // =====================================
+
+    setTimeout(
+        function () {
+
+            taskTitle.focus();
+
+        },
+        250
+    );
 
 }
 
@@ -1396,7 +1566,6 @@ function editTask(id) {
 // =========================================
 
 function deleteTask(id) {
-
 
     const confirmed =
         confirm(
@@ -1420,6 +1589,10 @@ function deleteTask(id) {
             }
         );
 
+
+    // =====================================
+    // HA ÉPP EZT SZERKESZTETTÜK
+    // =====================================
 
     if (
         editingTaskId === id
@@ -1509,7 +1682,8 @@ taskSearch.addEventListener(
             event.key === "Escape"
         ) {
 
-            taskSearch.value = "";
+            taskSearch.value =
+                "";
 
             renderTasks();
 
@@ -1541,6 +1715,106 @@ taskTitle.addEventListener(
 
     }
 );
+
+
+// =========================================
+// ÚJ FELADAT PANEL
+// =========================================
+
+if (
+    toggleTaskEditor &&
+    taskEditor
+) {
+
+    toggleTaskEditor.addEventListener(
+        "click",
+        function () {
+
+
+            const isOpen =
+                taskEditor.classList.contains(
+                    "open"
+                );
+
+
+            taskEditor.classList.toggle(
+                "open"
+            );
+
+
+            if (
+                isOpen
+            ) {
+
+                toggleTaskEditor.textContent =
+                    "➕ Új feladat";
+
+            }
+
+            else {
+
+                toggleTaskEditor.textContent =
+                    "➖ Új feladat";
+
+
+                taskTitle.focus();
+
+            }
+
+        }
+    );
+
+}
+
+
+// =========================================
+// KERESÉS + SZŰRÉS PANEL
+// =========================================
+
+if (
+    toggleTaskFilters &&
+    taskFilters
+) {
+
+    toggleTaskFilters.addEventListener(
+        "click",
+        function () {
+
+
+            const isOpen =
+                taskFilters.classList.contains(
+                    "open"
+                );
+
+
+            taskFilters.classList.toggle(
+                "open"
+            );
+
+
+            if (
+                isOpen
+            ) {
+
+                toggleTaskFilters.textContent =
+                    "🔎 Keresés és szűrés";
+
+            }
+
+            else {
+
+                toggleTaskFilters.textContent =
+                    "➖ Keresés és szűrés";
+
+
+                taskSearch.focus();
+
+            }
+
+        }
+    );
+
+}
 
 
 // =========================================
