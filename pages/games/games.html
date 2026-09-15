@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="hu">
 
@@ -103,8 +104,125 @@
             </h2>
 
             <p>
-                A Steam játékidőd automatikusan megjelenik itt.
+                A Steam könyvtárad és játékadataid egy helyen.
             </p>
+
+        </section>
+
+
+
+        <!-- =====================================
+             STEAM FIÓK
+        ====================================== -->
+
+        <section class="page-section steam-account-section">
+
+            <div class="steam-account-header">
+
+                <div>
+
+                    <h3>
+                        🎮 Steam-fiók
+                    </h3>
+
+                    <p id="steamAccountStatus">
+                        Steam-fiók ellenőrzése...
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================
+                 NINCS ÖSSZEKÖTVE
+            ================================== -->
+
+            <div
+                id="steamNotConnected"
+                class="steam-account-box"
+                style="display: none;"
+            >
+
+                <div class="steam-account-info">
+
+                    <strong>
+                        Nincs Steam-fiók összekötve
+                    </strong>
+
+                    <p>
+                        Kösd össze a Project Hub-fiókodat a Steam-fiókoddal,
+                        hogy automatikusan lekérhessük a saját játékaidat,
+                        játékidődet és achievementjeidet.
+                    </p>
+
+                </div>
+
+
+                <button
+                    id="connectSteamButton"
+                    class="steam-connect-button"
+                    type="button"
+                >
+
+                    🎮 Steam összekötése
+
+                </button>
+
+            </div>
+
+
+
+            <!-- =================================
+                 ÖSSZEKÖTVE
+            ================================== -->
+
+            <div
+                id="steamConnected"
+                class="steam-account-box"
+                style="display: none;"
+            >
+
+                <div class="steam-profile">
+
+                    <img
+                        id="steamAvatar"
+                        class="steam-avatar"
+                        src=""
+                        alt="Steam profilkép"
+                    >
+
+
+                    <div class="steam-profile-info">
+
+                        <strong
+                            id="steamPersonaName"
+                        >
+                            Steam felhasználó
+                        </strong>
+
+                        <span
+                            id="steamId"
+                        >
+                            SteamID betöltése...
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    id="disconnectSteamButton"
+                    class="steam-disconnect-button"
+                    type="button"
+                >
+
+                    Steam leválasztása
+
+                </button>
+
+            </div>
 
         </section>
 
@@ -114,7 +232,10 @@
              STEAM JÁTÉKOK
         ====================================== -->
 
-        <section class="page-section games-section">
+        <section
+            id="steamGamesSection"
+            class="page-section games-section"
+        >
 
             <div class="games-section-header">
 
@@ -133,7 +254,9 @@
             </div>
 
 
-            <!-- Ide kerülnek majd a játékok -->
+            <!-- =================================
+                 JÁTÉKOK
+            ================================== -->
 
             <div
                 id="gamesList"
@@ -141,7 +264,9 @@
             >
 
                 <div class="games-loading">
+
                     Steam játékok betöltése...
+
                 </div>
 
             </div>
@@ -149,7 +274,146 @@
         </section>
 
 
+
     </main>
+
+
+
+    <!-- =========================================
+         JÁTÉK RÉSZLETEK MODAL
+    ========================================== -->
+
+    <div
+        id="gameDetailsModal"
+        class="game-details-modal"
+        style="display: none;"
+    >
+
+        <div class="game-details-overlay"></div>
+
+
+        <div
+            class="game-details-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="gameDetailsTitle"
+        >
+
+            <!-- =================================
+                 BEZÁRÁS
+            ================================== -->
+
+            <button
+                id="closeGameDetailsButton"
+                class="game-details-close"
+                type="button"
+                aria-label="Bezárás"
+            >
+
+                ×
+
+            </button>
+
+
+
+            <!-- =================================
+                 JÁTÉK FEJLÉC
+            ================================== -->
+
+            <div class="game-details-header">
+
+                <img
+                    id="gameDetailsImage"
+                    class="game-details-image"
+                    src=""
+                    alt=""
+                >
+
+
+                <div class="game-details-title-area">
+
+                    <h2
+                        id="gameDetailsTitle"
+                    >
+                        Játék
+                    </h2>
+
+                    <p
+                        id="gameDetailsPlaytime"
+                    >
+                        Játékidő betöltése...
+                    </p>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================
+                 STATISZTIKÁK
+            ================================== -->
+
+            <div class="game-details-stats">
+
+                <div class="game-stat-box">
+
+                    <span class="game-stat-label">
+                        Játékidő
+                    </span>
+
+                    <strong id="gameDetailsHours">
+                        0 óra
+                    </strong>
+
+                </div>
+
+
+                <div class="game-stat-box">
+
+                    <span class="game-stat-label">
+                        Achievementek
+                    </span>
+
+                    <strong id="gameDetailsAchievementCount">
+                        0 / 0
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================
+                 ACHIEVEMENTEK
+            ================================== -->
+
+            <div class="game-achievements-section">
+
+                <h3>
+                    🏆 Achievementek
+                </h3>
+
+
+                <div
+                    id="gameAchievements"
+                    class="game-achievements-list"
+                >
+
+                    <div class="games-loading">
+
+                        Achievementek betöltése...
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
 
 
 
@@ -348,3 +612,15 @@
 </body>
 
 </html>
+```
+
+Ez a HTML már előkészíti az egész Steam rendszert. **Viszont önmagában még nem fog működni**, mert a `games.js`-nek is tudnia kell kezelni ezeket az ID-kat, illetve a backendben is kell a Steam-linkelés.
+
+A következő lépésben a **`games.js` teljes fájlját** érdemes megcsinálnunk az új backendhez, úgy hogy:
+
+1. betölti, össze van-e kötve a Steam,
+2. ha nincs → „Steam összekötése”,
+3. ha van → profil + játéklista,
+4. játékra kattintva → játékidő + achievementek,
+5. Steam leválasztás is működik,
+6. a Steam-link visszatérés után automatikusan frissül.
