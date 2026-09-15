@@ -187,23 +187,6 @@ async function initializeDatabase() {
     // ==================================================
     // NOTES
     // ==================================================
-    //
-    // FONTOS:
-    //
-    // A jelenlegi adatbázisban van:
-    //
-    // text
-    //
-    // és az új rendszerben:
-    //
-    // content
-    //
-    // Ezért mindkettőt megtartjuk.
-    //
-    // A backend mindig ugyanazt az értéket írja
-    // mindkét mezőbe.
-    //
-    // ==================================================
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS notes (
@@ -259,20 +242,12 @@ async function initializeDatabase() {
     `);
 
 
-    // ----------------------------------------------
-    // RÉGI TEXT MEZŐ
-    // ----------------------------------------------
-
     await pool.query(`
         ALTER TABLE notes
         ADD COLUMN IF NOT EXISTS text TEXT
         NOT NULL DEFAULT '';
     `);
 
-
-    // ----------------------------------------------
-    // ÚJ CONTENT MEZŐ
-    // ----------------------------------------------
 
     await pool.query(`
         ALTER TABLE notes
@@ -325,10 +300,6 @@ async function initializeDatabase() {
             AND text <> '';
     `);
 
-
-    // ==================================================
-    // CONTENT -> TEXT SZINKRON
-    // ==================================================
 
     await pool.query(`
         UPDATE notes
@@ -441,24 +412,6 @@ async function initializeDatabase() {
 
 // ======================================================
 // TASKS DATABASE INITIALIZATION
-// ======================================================
-//
-// A TASKS ugyanazt a tulajdonosi rendszert használja,
-// mint a NOTES.
-//
-// token
-//   ↓
-// auth_tokens
-//   ↓
-// user_id
-//   ↓
-// owner_tag
-//   ↓
-// tasks
-//
-// A frontend által küldött user_id / owner_tag
-// nem határozza meg a tulajdonost.
-//
 // ======================================================
 
 async function initializeTasksDatabase() {
@@ -911,20 +864,6 @@ async function getAuthenticatedUser(req) {
 // ======================================================
 // JEGYZET AUTH
 // ======================================================
-//
-// A NOTES modulban nincs session fallback.
-//
-// Kizárólag:
-//
-// Bearer token
-//      ↓
-// auth_tokens
-//      ↓
-// user_id
-//      ↓
-// users.id
-//
-// ======================================================
 
 async function getAuthenticatedNotesUser(req) {
 
@@ -958,20 +897,6 @@ async function getAuthenticatedNotesUser(req) {
 
 // ======================================================
 // TASK AUTH
-// ======================================================
-//
-// A TASKS modulban sincs session fallback.
-//
-// Kizárólag:
-//
-// Bearer token
-//      ↓
-// auth_tokens
-//      ↓
-// user_id
-//      ↓
-// users.id
-//
 // ======================================================
 
 async function getAuthenticatedTasksUser(req) {
@@ -1814,18 +1739,6 @@ app.get(
 // ======================================================
 // NOTES - GET
 // ======================================================
-//
-// A user kizárólag a Bearer tokenből származik.
-//
-// token
-//   ↓
-// auth_tokens.user_id
-//   ↓
-// users.id
-//
-// A frontend semmilyen user ID-t nem határoz meg.
-//
-// ======================================================
 
 app.get(
     "/api/notes",
@@ -1867,9 +1780,7 @@ app.get(
                         user_id,
                         owner_tag,
                         title,
-
                         content,
-
                         category,
                         pinned,
                         created_at,
@@ -2437,20 +2348,6 @@ app.delete(
 // ======================================================
 // TASKS - GET
 // ======================================================
-//
-// A user kizárólag a Bearer tokenből származik.
-//
-// token
-//   ↓
-// auth_tokens.user_id
-//   ↓
-// users.id
-//   ↓
-// tasks.user_id
-//
-// Másik user feladatai nem kerülnek vissza.
-//
-// ======================================================
 
 app.get(
     "/api/tasks",
@@ -2566,21 +2463,6 @@ app.get(
 // ======================================================
 // TASKS - CREATE
 // ======================================================
-//
-// A kliens által küldött:
-//
-// user_id
-// userId
-// owner_tag
-// ownerTag
-//
-// NEM számít.
-//
-// A tulajdonos kizárólag:
-//
-// token -> users.id
-//
-// ======================================================
 
 app.post(
     "/api/tasks",
@@ -2608,10 +2490,6 @@ app.post(
             }
 
 
-            // ==================================================
-            // BACKEND ÁLTAL MEGHATÁROZOTT TULAJDONOS
-            // ==================================================
-
             const ownerUserId =
                 user.id;
 
@@ -2621,10 +2499,6 @@ app.post(
                     ownerUserId
                 );
 
-
-            // ==================================================
-            // USER INPUT
-            // ==================================================
 
             const title =
                 typeof req.body.title ===
@@ -2701,10 +2575,6 @@ app.post(
             }
 
 
-            // ==================================================
-            // VALIDATION
-            // ==================================================
-
             if (!title) {
 
                 return res.status(400).json({
@@ -2718,10 +2588,6 @@ app.post(
 
             }
 
-
-            // ==================================================
-            // CREATE
-            // ==================================================
 
             const result =
                 await pool.query(
@@ -2815,13 +2681,19 @@ app.post(
 // TASKS - UPDATE
 // ======================================================
 //
-// Ellenőrzés:
+// FONTOS:
+// Ez az endpoint már RÉSZLEGES frissítést is támogat.
 //
-// ID
-// +
-// user_id
-// +
-// owner_tag
+// Például:
+//
+// {
+//     "completed": true
+// }
+//
+// önmagában is működik.
+//
+// A hiányzó mezők értéke az adatbázisban
+// lévő jelenlegi érték marad.
 //
 // ======================================================
 
@@ -2884,80 +2756,164 @@ app.put(
 
 
             // ==================================================
-            // USER INPUT
+            // MEGLÉVŐ FELADAT LEKÉRÉSE
+            // ==================================================
+
+            const existingResult =
+                await pool.query(
+                    `
+                    SELECT
+                        id,
+                        user_id,
+                        owner_tag,
+                        title,
+                        description,
+                        completed,
+                        priority,
+                        category,
+                        due_date,
+                        pinned,
+                        created_at,
+                        updated_at
+
+                    FROM tasks
+
+                    WHERE
+                        id = $1
+
+                        AND user_id = $2
+
+                        AND owner_tag = $3
+
+                    LIMIT 1
+                    `,
+                    [
+                        taskId,
+                        ownerUserId,
+                        ownerTag
+                    ]
+                );
+
+
+            if (
+                existingResult.rows.length === 0
+            ) {
+
+                return res.status(404).json({
+
+                    success: false,
+
+                    message:
+                        "A feladat nem található, vagy nem a te feladatod."
+
+                });
+
+            }
+
+
+            const existingTask =
+                existingResult.rows[0];
+
+
+            // ==================================================
+            // MEZŐK ÖSSZEFÉSÜLÉSE
             // ==================================================
 
             const title =
                 typeof req.body.title ===
                 "string"
                     ? req.body.title.trim()
-                    : "";
+                    : existingTask.title;
 
 
             const description =
                 typeof req.body.description ===
                 "string"
                     ? req.body.description
-                    : "";
+                    : existingTask.description;
 
 
             const completed =
-                req.body.completed === true;
+                typeof req.body.completed ===
+                "boolean"
+                    ? req.body.completed
+                    : existingTask.completed;
 
 
             const priority =
                 typeof req.body.priority ===
                 "string"
                     ? req.body.priority.trim()
-                    : "normal";
+                    : existingTask.priority;
 
 
             const category =
                 typeof req.body.category ===
                 "string"
                     ? req.body.category.trim()
-                    : "Egyéb";
+                    : existingTask.category;
 
 
             const pinned =
-                req.body.pinned === true;
+                typeof req.body.pinned ===
+                "boolean"
+                    ? req.body.pinned
+                    : existingTask.pinned;
 
 
-            let dueDate = null;
+            // ==================================================
+            // DUE DATE
+            // ==================================================
+
+            let dueDate =
+                existingTask.due_date;
 
 
             if (
-                req.body.due_date !== null &&
-                req.body.due_date !== undefined &&
-                req.body.due_date !== ""
+                Object.prototype.hasOwnProperty.call(
+                    req.body,
+                    "due_date"
+                )
             ) {
 
-                const parsedDate =
-                    new Date(
-                        req.body.due_date
-                    );
-
-
                 if (
-                    Number.isNaN(
-                        parsedDate.getTime()
-                    )
+                    req.body.due_date === null ||
+                    req.body.due_date === ""
                 ) {
 
-                    return res.status(400).json({
-
-                        success: false,
-
-                        message:
-                            "Érvénytelen határidő."
-
-                    });
+                    dueDate = null;
 
                 }
+                else {
+
+                    const parsedDate =
+                        new Date(
+                            req.body.due_date
+                        );
 
 
-                dueDate =
-                    parsedDate;
+                    if (
+                        Number.isNaN(
+                            parsedDate.getTime()
+                        )
+                    ) {
+
+                        return res.status(400).json({
+
+                            success: false,
+
+                            message:
+                                "Érvénytelen határidő."
+
+                        });
+
+                    }
+
+
+                    dueDate =
+                        parsedDate;
+
+                }
 
             }
 
