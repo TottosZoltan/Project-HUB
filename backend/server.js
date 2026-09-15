@@ -9,6 +9,7 @@ const session = require("express-session");
 const connectPgSimple = require("connect-pg-simple");
 const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 
 
 // =========================================
@@ -150,6 +151,303 @@ const STEAM_ID =
 
 
 // =========================================
+// AUTH TOKEN BEÁLLÍTÁSOK
+// =========================================
+
+const AUTH_TOKEN_LIFETIME_MS =
+    1000 *
+    60 *
+    60 *
+    24 *
+    30;
+
+
+// =========================================
+// AUTH TOKEN SEGÉDFÜGGVÉNYEK
+// =========================================
+
+function generateAuthToken() {
+
+    return crypto.randomBytes(32).toString("hex");
+
+}
+
+
+function hashAuthToken(token) {
+
+    return crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
+
+}
+
+
+function getBearerToken(req) {
+
+    const authorization =
+        req.headers.authorization;
+
+
+    if (
+        !authorization ||
+        typeof authorization !== "string"
+    ) {
+
+        return null;
+
+    }
+
+
+    if (
+        !authorization.startsWith(
+            "Bearer "
+        )
+    ) {
+
+        return null;
+
+    }
+
+
+    const token =
+        authorization
+            .slice(7)
+            .trim();
+
+
+    if (!token) {
+
+        return null;
+
+    }
+
+
+    return token;
+
+}
+
+
+// =========================================
+// AUTH TOKEN LÉTREHOZÁSA
+// =========================================
+
+async function createAuthToken(userId) {
+
+    const token =
+        generateAuthToken();
+
+
+    const tokenHash =
+        hashAuthToken(token);
+
+
+    const expiresAt =
+        new Date(
+            Date.now() +
+            AUTH_TOKEN_LIFETIME_MS
+        );
+
+
+    await pool.query(
+
+        `
+        INSERT INTO auth_tokens
+        (
+            user_id,
+            token_hash,
+            expires_at
+        )
+
+        VALUES
+        (
+            $1,
+            $2,
+            $3
+        )
+        `,
+
+        [
+            userId,
+            tokenHash,
+            expiresAt
+        ]
+
+    );
+
+
+    return token;
+
+}
+
+
+// =========================================
+// AUTH TOKEN ELLENŐRZÉSE
+// =========================================
+
+async function getUserFromAuthToken(token) {
+
+    if (!token) {
+
+        return null;
+
+    }
+
+
+    const tokenHash =
+        hashAuthToken(token);
+
+
+    const result =
+        await pool.query(
+
+            `
+            SELECT
+                u.id,
+                u.username,
+                u.email,
+                u.created_at,
+                a.id AS auth_token_id
+
+            FROM auth_tokens a
+
+            INNER JOIN users u
+                ON u.id = a.user_id
+
+            WHERE a.token_hash = $1
+
+              AND a.expires_at > CURRENT_TIMESTAMP
+
+            LIMIT 1
+            `,
+
+            [
+                tokenHash
+            ]
+
+        );
+
+
+    if (
+        result.rows.length === 0
+    ) {
+
+        return null;
+
+    }
+
+
+    return result.rows[0];
+
+}
+
+
+// =========================================
+// BEJELENTKEZETT FELHASZNÁLÓ LEKÉRÉSE
+// =========================================
+
+async function getAuthenticatedUser(req) {
+
+    // =========================================
+    // TOKEN ALAPÚ BEJELENTKEZÉS
+    // =========================================
+
+    const bearerToken =
+        getBearerToken(req);
+
+
+    if (bearerToken) {
+
+        const tokenUser =
+            await getUserFromAuthToken(
+                bearerToken
+            );
+
+
+        if (tokenUser) {
+
+            return {
+
+                user:
+                    tokenUser,
+
+                authTokenId:
+                    tokenUser.auth_token_id,
+
+                method:
+                    "token"
+
+            };
+
+        }
+
+
+        return null;
+
+    }
+
+
+    // =========================================
+    // SESSION ALAPÚ BEJELENTKEZÉS
+    // =========================================
+
+    if (
+        req.session &&
+        req.session.userId
+    ) {
+
+        const result =
+            await pool.query(
+
+                `
+                SELECT
+                    id,
+                    username,
+                    email,
+                    created_at
+                FROM users
+                WHERE id = $1
+                LIMIT 1
+                `,
+
+                [
+                    req.session.userId
+                ]
+
+            );
+
+
+        if (
+            result.rows.length === 0
+        ) {
+
+            return null;
+
+        }
+
+
+        return {
+
+            user:
+                result.rows[0],
+
+            authTokenId:
+                null,
+
+            method:
+                "session"
+
+        };
+
+    }
+
+
+    return null;
+
+}
+
+
+// =========================================
 // ADATBÁZIS
 // =========================================
 
@@ -183,6 +481,47 @@ async function initializeDatabase() {
         `);
 
 
+        // =========================================
+        // AUTH TOKEN TÁBLA
+        // =========================================
+
+        await pool.query(`
+
+            CREATE TABLE IF NOT EXISTS auth_tokens (
+
+                id SERIAL PRIMARY KEY,
+
+                user_id INTEGER
+                    NOT NULL
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+
+                token_hash TEXT
+                    NOT NULL UNIQUE,
+
+                expires_at TIMESTAMP
+                    NOT NULL,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
+
+            );
+
+        `);
+
+
+        // =========================================
+        // LEJÁRT TOKENEK TÖRLÉSE
+        // =========================================
+
+        await pool.query(`
+
+            DELETE FROM auth_tokens
+            WHERE expires_at <= CURRENT_TIMESTAMP;
+
+        `);
+
+
         console.log(
             "PostgreSQL kapcsolat működik."
         );
@@ -190,6 +529,11 @@ async function initializeDatabase() {
 
         console.log(
             "A users tábla készen áll."
+        );
+
+
+        console.log(
+            "Az auth_tokens tábla készen áll."
         );
 
     }
@@ -524,6 +868,16 @@ app.post(
                 user.username;
 
 
+            // =========================================
+            // MOBIL AUTH TOKEN
+            // =========================================
+
+            const authToken =
+                await createAuthToken(
+                    user.id
+                );
+
+
             req.session.save(
                 function (sessionError) {
 
@@ -554,6 +908,9 @@ app.post(
 
                         message:
                             "Sikeres bejelentkezés.",
+
+                        token:
+                            authToken,
 
                         user: {
 
@@ -615,9 +972,13 @@ app.get(
             );
 
 
-            if (
-                !req.session.userId
-            ) {
+            const authenticatedUser =
+                await getAuthenticatedUser(
+                    req
+                );
+
+
+            if (!authenticatedUser) {
 
                 return res.status(401).json({
 
@@ -632,56 +993,26 @@ app.get(
             }
 
 
-            const result =
-                await pool.query(
-
-                    `
-                    SELECT
-                        id,
-                        username,
-                        email,
-                        created_at
-                    FROM users
-                    WHERE id = $1
-                    LIMIT 1
-                    `,
-
-                    [
-                        req.session.userId
-                    ]
-
-                );
-
-
-            if (
-                result.rows.length === 0
-            ) {
-
-                req.session.destroy(
-                    function () {}
-                );
-
-
-                return res.status(401).json({
-
-                    success:
-                        false,
-
-                    message:
-                        "A felhasználó nem található."
-
-                });
-
-            }
-
-
             res.json({
 
                 success:
                     true,
 
-                user:
-                    result.rows[0]
+                user: {
+
+                    id:
+                        authenticatedUser.user.id,
+
+                    username:
+                        authenticatedUser.user.username,
+
+                    email:
+                        authenticatedUser.user.email,
+
+                    created_at:
+                        authenticatedUser.user.created_at
+
+                }
 
             });
 
@@ -717,53 +1048,121 @@ app.get(
 
 app.post(
     "/api/auth/logout",
-    function (req, res) {
+    async function (req, res) {
 
-        req.session.destroy(
-            function (error) {
+        try {
 
-                if (error) {
+            const bearerToken =
+                getBearerToken(req);
 
-                    console.error(
-                        "Kijelentkezési hiba:",
-                        error
+
+            // =========================================
+            // TOKEN TÖRLÉSE
+            // =========================================
+
+            if (bearerToken) {
+
+                const tokenHash =
+                    hashAuthToken(
+                        bearerToken
                     );
 
 
-                    return res.status(500).json({
+                await pool.query(
 
-                        success:
-                            false,
+                    `
+                    DELETE FROM auth_tokens
+                    WHERE token_hash = $1
+                    `,
 
-                        message:
-                            "Nem sikerült kijelentkezni."
+                    [
+                        tokenHash
+                    ]
 
-                    });
+                );
 
-                }
+            }
 
 
-                res.clearCookie(
-                    "connect.sid",
-                    {
-                        path:
-                            "/"
+            // =========================================
+            // SESSION TÖRLÉSE
+            // =========================================
+
+            if (
+                req.session
+            ) {
+
+                req.session.destroy(
+                    function (error) {
+
+                        if (error) {
+
+                            console.error(
+                                "Kijelentkezési session hiba:",
+                                error
+                            );
+
+                        }
+
+
+                        res.clearCookie(
+                            "connect.sid",
+                            {
+                                path:
+                                    "/"
+                            }
+                        );
+
+
+                        res.json({
+
+                            success:
+                                true,
+
+                            message:
+                                "Sikeres kijelentkezés."
+
+                        });
+
                     }
                 );
 
-
-                res.json({
-
-                    success:
-                        true,
-
-                    message:
-                        "Sikeres kijelentkezés."
-
-                });
+                return;
 
             }
-        );
+
+
+            res.json({
+
+                success:
+                    true,
+
+                message:
+                    "Sikeres kijelentkezés."
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Kijelentkezési hiba:",
+                error
+            );
+
+
+            res.status(500).json({
+
+                success:
+                    false,
+
+                message:
+                    "Nem sikerült kijelentkezni."
+
+            });
+
+        }
 
     }
 );
