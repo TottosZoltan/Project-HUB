@@ -1189,3 +1189,105 @@ noteSearch.addEventListener(
 saveNotesToStorage();
 
 renderNotes();
+
+// =========================================
+// ÖSSZECSUKHATÓ JEGYZET PANEL
+// =========================================
+
+const toggleNoteEditor =
+    document.getElementById(
+        "toggleNoteEditor"
+    );
+
+const toggleNoteFilters =
+    document.getElementById(
+        "toggleNoteFilters"
+    );
+
+const noteEditor =
+    document.getElementById(
+        "noteEditor"
+    );
+
+const noteFilters =
+    document.getElementById(
+        "noteFilters"
+    );
+
+
+// =========================================
+// ÚJ JEGYZET PANEL
+// =========================================
+
+toggleNoteEditor.addEventListener(
+    "click",
+    function () {
+
+        const isOpen =
+            noteEditor.classList.contains(
+                "open"
+            );
+
+
+        noteEditor.classList.toggle(
+            "open"
+        );
+
+
+        if (isOpen) {
+
+            toggleNoteEditor.textContent =
+                "➕ Új jegyzet";
+
+        }
+
+        else {
+
+            toggleNoteEditor.textContent =
+                "➖ Új jegyzet";
+
+            noteTitle.focus();
+
+        }
+
+    }
+);
+
+
+// =========================================
+// KERESÉS + SZŰRÉS PANEL
+// =========================================
+
+toggleNoteFilters.addEventListener(
+    "click",
+    function () {
+
+        const isOpen =
+            noteFilters.classList.contains(
+                "open"
+            );
+
+
+        noteFilters.classList.toggle(
+            "open"
+        );
+
+
+        if (isOpen) {
+
+            toggleNoteFilters.textContent =
+                "🔎 Keresés és szűrés";
+
+        }
+
+        else {
+
+            toggleNoteFilters.textContent =
+                "➖ Keresés és szűrés";
+
+            noteSearch.focus();
+
+        }
+
+    }
+);
