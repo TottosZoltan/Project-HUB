@@ -46,13 +46,29 @@
                 🎮 Játékok
             </a>
 
-            <a href="pages/places.html">
-                📍 Helyek
-            </a>
-            <a href="pages/login.html">   
-                🔐 Bejelentkezés
-            </a>
-        </div>
+<a href="pages/places.html">
+    📍 Helyek
+</a>
+
+<div id="authMenu">
+
+    <a href="pages/login.html" id="loginMenuItem">
+        🔐 Bejelentkezés
+    </a>
+
+    <div id="userMenuItem" style="display: none;">
+
+        <a href="#" id="userProfileLink">
+            👤 <span id="usernameDisplay"></span>
+        </a>
+
+        <a href="#" id="logoutButton">
+            🚪 Kijelentkezés
+        </a>
+
+    </div>
+
+</div>
 
     </nav>
 
