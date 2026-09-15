@@ -12,9 +12,37 @@
 
     <title>Feladatok - Project Hub</title>
 
-    <link rel="stylesheet" href="../../style.css">
-    <link rel="stylesheet" href="../pages.css">
-    <link rel="stylesheet" href="tasks.css">
+    <link
+        rel="stylesheet"
+        href="../../style.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="../pages.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="tasks.css"
+    >
+
+
+    <!-- =========================================
+         APP VÉDELEM
+    ========================================== -->
+
+    <style>
+
+        body {
+            visibility: hidden;
+        }
+
+        body.authenticated {
+            visibility: visible;
+        }
+
+    </style>
 
 </head>
 
@@ -24,7 +52,7 @@
 
     <!-- =========================================
          FEJLÉC
-    ========================================= -->
+    ========================================== -->
 
     <header class="header">
 
@@ -32,7 +60,9 @@
 
             <h1>FELADATOK</h1>
 
-            <p>Project Hub</p>
+            <p>
+                Project Hub
+            </p>
 
         </div>
 
@@ -53,14 +83,14 @@
 
     <!-- =========================================
          FŐ TARTALOM
-    ========================================= -->
+    ========================================== -->
 
     <main class="page-content tasks-page">
 
 
         <!-- =====================================
              BEVEZETŐ
-        ===================================== -->
+        ====================================== -->
 
         <section class="page-intro">
 
@@ -82,7 +112,7 @@
 
         <!-- =====================================
              MODUL GOMBOK
-        ===================================== -->
+        ====================================== -->
 
         <div class="module-actions">
 
@@ -151,7 +181,10 @@
                             🟢 Alacsony
                         </option>
 
-                        <option value="normal" selected>
+                        <option
+                            value="normal"
+                            selected
+                        >
                             🟡 Normál
                         </option>
 
@@ -217,14 +250,17 @@
 
         <!-- =====================================
              STATISZTIKA
-        ===================================== -->
+        ====================================== -->
 
         <section class="task-stats">
 
 
             <div class="task-stat">
 
-                <span class="task-stat-number" id="totalTasks">
+                <span
+                    class="task-stat-number"
+                    id="totalTasks"
+                >
                     0
                 </span>
 
@@ -237,7 +273,10 @@
 
             <div class="task-stat">
 
-                <span class="task-stat-number" id="activeTasks">
+                <span
+                    class="task-stat-number"
+                    id="activeTasks"
+                >
                     0
                 </span>
 
@@ -250,7 +289,10 @@
 
             <div class="task-stat">
 
-                <span class="task-stat-number" id="completedTasks">
+                <span
+                    class="task-stat-number"
+                    id="completedTasks"
+                >
                     0
                 </span>
 
@@ -263,7 +305,10 @@
 
             <div class="task-stat">
 
-                <span class="task-stat-number" id="progressPercent">
+                <span
+                    class="task-stat-number"
+                    id="progressPercent"
+                >
                     0%
                 </span>
 
@@ -279,7 +324,7 @@
 
         <!-- =====================================
              HALADÁSI SÁV
-        ===================================== -->
+        ====================================== -->
 
         <section class="task-progress">
 
@@ -311,7 +356,7 @@
 
         <!-- =====================================
              KERESÉS + SZŰRÉS
-        ===================================== -->
+        ====================================== -->
 
         <section
             class="tasks-tools collapsible-panel"
@@ -423,7 +468,7 @@
 
         <!-- =====================================
              FELADATOK
-        ===================================== -->
+        ====================================== -->
 
         <section class="tasks-section">
 
@@ -504,10 +549,204 @@
 
 
     <!-- =========================================
-         JAVASCRIPT
-    ========================================= -->
+         AUTH ELLENŐRZÉS
+    ========================================== -->
+
+    <script>
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+
+                const BACKEND_URL =
+                    "https://project-hub-backend-1.onrender.com";
+
+
+                const LOGIN_PAGE =
+                    "../auth/login.html";
+
+
+                // =====================================
+                // TOKEN
+                // =====================================
+
+                const token =
+                    localStorage.getItem(
+                        "projectHubAuthToken"
+                    );
+
+
+                // =====================================
+                // NINCS TOKEN
+                // =====================================
+
+                if (!token) {
+
+                    sessionStorage.setItem(
+                        "projectHubAuthMessage",
+                        "🔐 A Feladatok használatához be kell jelentkezned."
+                    );
+
+                    window.location.href =
+                        LOGIN_PAGE;
+
+                    return;
+
+                }
+
+
+                // =====================================
+                // AUTH ELLENŐRZÉS
+                // =====================================
+
+                try {
+
+                    const response =
+                        await fetch(
+                            BACKEND_URL +
+                            "/api/auth/me",
+                            {
+                                method: "GET",
+
+                                headers: {
+                                    "Authorization":
+                                        "Bearer " + token
+                                },
+
+                                credentials:
+                                    "include"
+                            }
+                        );
+
+
+                    let result;
+
+
+                    try {
+
+                        result =
+                            await response.json();
+
+                    } catch (jsonError) {
+
+                        console.error(
+                            "Auth válasz feldolgozási hiba:",
+                            jsonError
+                        );
+
+
+                        localStorage.removeItem(
+                            "projectHubAuthToken"
+                        );
+
+
+                        sessionStorage.setItem(
+                            "projectHubAuthMessage",
+                            "⚠️ A munkamenetet nem sikerült ellenőrizni. Jelentkezz be újra."
+                        );
+
+
+                        window.location.href =
+                            LOGIN_PAGE;
+
+                        return;
+
+                    }
+
+
+                    console.log(
+                        "FELADATOK AUTH ELLENŐRZÉS:",
+                        result
+                    );
+
+
+                    // =================================
+                    // SIKERES AUTH
+                    // =================================
+
+                    if (
+                        response.ok &&
+                        result.success &&
+                        result.user
+                    ) {
+
+                        console.log(
+                            "Feladatok oldal engedélyezve:",
+                            result.user.username
+                        );
+
+
+                        document.body.classList.add(
+                            "authenticated"
+                        );
+
+
+                        return;
+
+                    }
+
+
+                    // =================================
+                    // ÉRVÉNYTELEN TOKEN
+                    // =================================
+
+                    localStorage.removeItem(
+                        "projectHubAuthToken"
+                    );
+
+
+                    sessionStorage.setItem(
+                        "projectHubAuthMessage",
+                        "🔐 A munkameneted lejárt. Kérlek jelentkezz be újra."
+                    );
+
+
+                    window.location.href =
+                        LOGIN_PAGE;
+
+
+                } catch (error) {
+
+                    console.error(
+                        "Feladatok auth ellenőrzési hiba:",
+                        error
+                    );
+
+
+                    localStorage.removeItem(
+                        "projectHubAuthToken"
+                    );
+
+
+                    sessionStorage.setItem(
+                        "projectHubAuthMessage",
+                        "⚠️ A munkamenetet nem sikerült ellenőrizni. Jelentkezz be újra."
+                    );
+
+
+                    window.location.href =
+                        LOGIN_PAGE;
+
+                }
+
+            }
+        );
+
+    </script>
+
+
+
+    <!-- =========================================
+         PROJECT HUB SCRIPT
+    ========================================== -->
 
     <script src="../../script.js"></script>
+
+
+    <!-- =========================================
+         FELADATOK SCRIPT
+    ========================================== -->
+
     <script src="tasks.js"></script>
 
 
