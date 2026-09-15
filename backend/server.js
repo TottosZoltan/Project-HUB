@@ -25,7 +25,9 @@ const app =
 // =========================================
 
 app.use(
-    cors()
+    cors({
+        origin: true
+    })
 );
 
 app.use(
