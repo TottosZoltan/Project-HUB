@@ -1,34 +1,78 @@
 <!DOCTYPE html>
 <html lang="hu">
-<main class="page-content games-page">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Játékok - Project Hub</title>
 
-    <link rel="stylesheet" href="../style.css">
+    <link
+        rel="stylesheet"
+        href="../style.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="pages.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="games.css"
+    >
+
 </head>
 
+
 <body>
+
+
+    <!-- =========================================
+         FEJLÉC
+    ========================================== -->
 
     <header class="header">
 
         <div>
+
             <h1>JÁTÉKOK</h1>
+
             <p>Project Hub</p>
+
         </div>
 
-        <a href="../" class="back-button">
-    <span class="back-arrow"></span>
-</a>
+
+        <a
+            href="../"
+            class="back-button"
+        >
+
+            <span class="back-arrow"></span>
+
+        </a>
 
     </header>
 
 
-    <main>
 
-        <section class="welcome">
+    <!-- =========================================
+         FŐ TARTALOM
+    ========================================== -->
+
+    <main class="page-content games-page">
+
+
+        <!-- =====================================
+             BEVEZETŐ
+        ====================================== -->
+
+        <section class="page-intro">
 
             <p class="small-title">
                 PROJECT HUB
@@ -39,12 +83,62 @@
             </h2>
 
             <p>
-                Ide kerülnek majd a játékaid és értékeléseid.
+                A Steam játékidőd automatikusan megjelenik itt.
             </p>
 
         </section>
 
+
+
+        <!-- =====================================
+             STEAM JÁTÉKOK
+        ====================================== -->
+
+        <section class="page-section games-section">
+
+            <div class="games-section-header">
+
+                <div>
+
+                    <h3>
+                        Steam könyvtár
+                    </h3>
+
+                    <p>
+                        Játékidő alapján rendezve
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- Ide kerülnek majd a játékok -->
+
+            <div
+                id="gamesList"
+                class="games-list"
+            >
+
+                <div class="games-loading">
+                    Steam játékok betöltése...
+                </div>
+
+            </div>
+
+        </section>
+
+
     </main>
+
+
+
+    <!-- =========================================
+         JAVASCRIPT
+    ========================================== -->
+
+    <script src="games.js"></script>
+
 
 </body>
 
