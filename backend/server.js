@@ -8,14 +8,12 @@ const crypto = require("crypto");
 
 const app = express();
 
-const PORT =
-    process.env.PORT || 10000;
+const PORT = process.env.PORT || 10000;
 
-const FRONTEND_URL =
-    "https://tottoszoltan.github.io";
+const FRONTEND_URL = "https://tottoszoltan.github.io";
+const BACKEND_URL = "https://project-hub-backend-1.onrender.com";
 
-const STEAM_API_KEY =
-    process.env.STEAM_API_KEY;
+const STEAM_API_KEY = process.env.STEAM_API_KEY;
 
 
 // ======================================================
@@ -143,7 +141,30 @@ async function initializeDatabase() {
         TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     `);
 
+    await pool.query(`
+    CREATE TABLE IF NOT EXISTS steam_accounts (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        steam_id VARCHAR(32) NOT NULL UNIQUE,
+        persona_name TEXT,
+        avatar_url TEXT,
+        linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+`);
 
+
+    await pool.query(`
+    CREATE TABLE IF NOT EXISTS steam_link_states (
+        id SERIAL PRIMARY KEY,
+        state_hash TEXT UNIQUE NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+`);
+    
+    
     // ==================================================
     // AUTH TOKENS
     // ==================================================
@@ -814,7 +835,80 @@ function getBearerToken(req) {
 
     return token;
 }
+async function getLinkedSteamAccount(userId) {
+    const result = await pool.query(
+        `
+        SELECT
+            id,
+            user_id,
+            steam_id,
+            persona_name,
+            avatar_url,
+            linked_at,
+            updated_at
+        FROM steam_accounts
+        WHERE user_id = $1
+        LIMIT 1
+        `,
+        [userId]
+    );
 
+    return result.rows[0] || null;
+}
+
+
+async function getAuthenticatedSteamUser(req) {
+    const bearerToken = getBearerToken(req);
+
+    if (!bearerToken) {
+        return null;
+    }
+
+    const user = await getUserFromAuthToken(bearerToken);
+
+    if (!user) {
+        return null;
+    }
+
+    return user;
+}
+
+
+function createSteamLinkState() {
+    return crypto.randomBytes(32).toString("hex");
+}
+
+
+function hashSteamLinkState(state) {
+    return crypto
+        .createHash("sha256")
+        .update(state)
+        .digest("hex");
+}
+
+
+async function getSteamPlayerSummary(steamId) {
+    if (!STEAM_API_KEY) {
+        return null;
+    }
+
+    const url =
+        "https://api.steampowered.com/" +
+        "ISteamUser/GetPlayerSummaries/v0002/" +
+        "?key=" + encodeURIComponent(STEAM_API_KEY) +
+        "&steamids=" + encodeURIComponent(steamId) +
+        "&format=json";
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        return null;
+    }
+
+    const data = await response.json();
+
+    return data?.response?.players?.[0] || null;
+}
 
 // ======================================================
 // USER KERESÉSE TOKEN ALAPJÁN
@@ -2901,13 +2995,8 @@ app.put(
                     message:
                         "A feladat nem található, vagy nem a te feladatod."
 
-                });
-
-            }
-
-
-            const existingTask =
-                existingResult.rows[0];
+                        const existingTask =
+                existingResult.rows[0];}
 
 
             const title =
@@ -3465,6 +3554,20 @@ app.get(
             }
 
 
+            if (!STEAM_API_KEY) {
+
+                return res.status(500).json({
+
+                    success: false,
+
+                    message:
+                        "A STEAM_API_KEY nincs beállítva."
+
+                });
+
+            }
+
+
             const state =
                 crypto
                     .randomBytes(32)
@@ -3489,6 +3592,7 @@ app.get(
             await pool.query(
                 `
                 DELETE FROM steam_link_states
+
                 WHERE user_id = $1
                 `,
                 [
@@ -3520,8 +3624,8 @@ app.get(
 
 
             const returnTo =
-                FRONTEND_URL +
-                "/?steam_link=callback";
+                BACKEND_URL +
+                "/api/steam/callback";
 
 
             const steamOpenIdUrl =
@@ -3536,13 +3640,13 @@ app.get(
 
                     "openid.return_to":
                         returnTo +
-                        "&state=" +
+                        "?state=" +
                         encodeURIComponent(
                             state
                         ),
 
                     "openid.realm":
-                        FRONTEND_URL,
+                        BACKEND_URL + "/",
 
                     "openid.identity":
                         "http://specs.openid.net/auth/2.0/identifier_select",
@@ -3685,7 +3789,9 @@ app.get(
                 ) {
 
                     verifyParams[key] =
-                        value;
+                        Array.isArray(value)
+                            ? value[0]
+                            : value;
 
                 }
 
@@ -3719,6 +3825,17 @@ app.get(
 
             if (!verifyResponse.ok) {
 
+                await pool.query(
+                    `
+                    DELETE FROM steam_link_states
+                    WHERE id = $1
+                    `,
+                    [
+                        linkState.id
+                    ]
+                );
+
+
                 return res.redirect(
                     FRONTEND_URL +
                     "/?steam_link=error&reason=steam_verify_failed"
@@ -3736,6 +3853,17 @@ app.get(
                     verifyText
                 )
             ) {
+
+                await pool.query(
+                    `
+                    DELETE FROM steam_link_states
+                    WHERE id = $1
+                    `,
+                    [
+                        linkState.id
+                    ]
+                );
+
 
                 return res.redirect(
                     FRONTEND_URL +
@@ -3757,13 +3885,24 @@ app.get(
 
             const steamIdMatch =
                 claimedId.match(
-                    /\/id\/(\d+)$/
+                    /^https:\/\/steamcommunity\.com\/openid\/id\/(\d+)$/
                 );
 
 
             if (
                 !steamIdMatch
             ) {
+
+                await pool.query(
+                    `
+                    DELETE FROM steam_link_states
+                    WHERE id = $1
+                    `,
+                    [
+                        linkState.id
+                    ]
+                );
+
 
                 return res.redirect(
                     FRONTEND_URL +
@@ -3775,6 +3914,56 @@ app.get(
 
             const steamId =
                 steamIdMatch[1];
+
+
+            // ==================================================
+            // ELLENŐRIZZÜK, HOGY EZ A STEAM FIÓK
+            // NINCS-E MÁSIK PROJECT HUB USERHEZ KAPCSOLVA
+            // ==================================================
+
+            const existingSteamAccount =
+                await pool.query(
+                    `
+                    SELECT
+                        user_id
+
+                    FROM steam_accounts
+
+                    WHERE
+                        steam_id = $1
+
+                        AND user_id <> $2
+
+                    LIMIT 1
+                    `,
+                    [
+                        steamId,
+                        linkState.user_id
+                    ]
+                );
+
+
+            if (
+                existingSteamAccount.rows.length > 0
+            ) {
+
+                await pool.query(
+                    `
+                    DELETE FROM steam_link_states
+                    WHERE id = $1
+                    `,
+                    [
+                        linkState.id
+                    ]
+                );
+
+
+                return res.redirect(
+                    FRONTEND_URL +
+                    "/?steam_link=error&reason=steam_already_linked"
+                );
+
+            }
 
 
             // ==================================================
@@ -3891,6 +4080,7 @@ app.get(
             await pool.query(
                 `
                 DELETE FROM steam_link_states
+
                 WHERE id = $1
                 `,
                 [
@@ -4042,6 +4232,7 @@ app.delete(
             await pool.query(
                 `
                 DELETE FROM steam_accounts
+
                 WHERE user_id = $1
                 `,
                 [
@@ -4863,10 +5054,7 @@ app.get(
                     "v0001",
                     {
                         steamid:
-                            account.steam_id,
-
-                        format:
-                            "json"
+                            account.steam_id
                     }
                 );
 
@@ -4952,8 +5140,6 @@ app.get(
 
     }
 );
-
-
 // ======================================================
 // GLOBAL ERROR HANDLER
 // ======================================================
