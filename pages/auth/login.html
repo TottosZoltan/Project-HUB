@@ -1,1 +1,163 @@
+<!DOCTYPE html>
+<html lang="hu">
 
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Bejelentkezés - Project Hub</title>
+
+    <link
+        rel="stylesheet"
+        href="../style.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="pages.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="login.css"
+    >
+
+</head>
+
+
+<body>
+
+    <header class="header">
+
+        <div>
+
+            <h1>BEJELENTKEZÉS</h1>
+
+            <p>
+                Project Hub
+            </p>
+
+        </div>
+
+
+        <a
+            href="../"
+            class="back-button"
+        >
+
+            <span class="back-arrow"></span>
+
+        </a>
+
+    </header>
+
+
+    <main class="page-content login-page">
+
+
+        <section class="page-intro">
+
+            <p class="small-title">
+                PROJECT HUB
+            </p>
+
+            <h2>
+                🔐 Üdv újra!
+            </h2>
+
+            <p>
+                Jelentkezz be a Project Hub fiókodba.
+            </p>
+
+        </section>
+
+
+        <section class="page-section login-section">
+
+
+            <form id="loginForm">
+
+
+                <div class="form-group">
+
+                    <label for="email">
+                        E-mail cím
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="pelda@email.com"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="password">
+                        Jelszó
+                    </label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Jelszó"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                </div>
+
+
+                <div
+                    id="loginMessage"
+                    class="login-message"
+                ></div>
+
+
+                <button
+                    type="submit"
+                    id="loginButton"
+                    class="login-button"
+                >
+                    Bejelentkezés
+                </button>
+
+
+            </form>
+
+
+        </section>
+
+
+        <section class="login-register">
+
+            <p>
+                Még nincs fiókod?
+            </p>
+
+            <a href="register.html">
+                Regisztráció
+            </a>
+
+        </section>
+
+
+    </main>
+
+
+    <script src="login.js"></script>
+
+</body>
+
+</html>
