@@ -8,7 +8,8 @@ const crypto = require("crypto");
 
 const app = express();
 
-const PORT = process.env.PORT || 10000;
+const PORT =
+    process.env.PORT || 10000;
 
 const FRONTEND_URL =
     "https://tottoszoltan.github.io";
@@ -104,9 +105,10 @@ async function initializeDatabase() {
         "Adatbázis inicializálása..."
     );
 
-    // --------------------------------------------------
+
+    // ==================================================
     // USERS
-    // --------------------------------------------------
+    // ==================================================
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS users (
@@ -119,10 +121,6 @@ async function initializeDatabase() {
         );
     `);
 
-
-    // --------------------------------------------------
-    // EXISTING DATABASE MIGRATIONS
-    // --------------------------------------------------
 
     await pool.query(`
         ALTER TABLE users
@@ -150,19 +148,24 @@ async function initializeDatabase() {
     `);
 
 
-    // --------------------------------------------------
+    // ==================================================
     // AUTH TOKENS
-    // --------------------------------------------------
+    // ==================================================
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS auth_tokens (
             id SERIAL PRIMARY KEY,
+
             user_id INTEGER NOT NULL
                 REFERENCES users(id)
                 ON DELETE CASCADE,
+
             token_hash TEXT UNIQUE NOT NULL,
+
             expires_at TIMESTAMP NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP
         );
     `);
 
@@ -181,25 +184,160 @@ async function initializeDatabase() {
     `);
 
 
-    // --------------------------------------------------
+    // ==================================================
     // NOTES
-    // --------------------------------------------------
+    // ==================================================
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS notes (
             id SERIAL PRIMARY KEY,
+
             user_id INTEGER NOT NULL
                 REFERENCES users(id)
                 ON DELETE CASCADE,
+
+            owner_tag TEXT NOT NULL,
+
             title TEXT NOT NULL DEFAULT '',
+
             content TEXT NOT NULL DEFAULT '',
-            category VARCHAR(100) NOT NULL DEFAULT 'Egyéb',
-            pinned BOOLEAN NOT NULL DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+            category VARCHAR(100)
+                NOT NULL DEFAULT 'Egyéb',
+
+            pinned BOOLEAN
+                NOT NULL DEFAULT FALSE,
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP,
+
+            updated_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP
         );
     `);
 
+
+    // ==================================================
+    // RÉGI NOTES TÁBLA MIGRÁCIÓ
+    // ==================================================
+
+    await pool.query(`
+        ALTER TABLE notes
+        ADD COLUMN IF NOT EXISTS user_id INTEGER;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE notes
+        ADD COLUMN IF NOT EXISTS owner_tag TEXT;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE notes
+        ADD COLUMN IF NOT EXISTS title TEXT
+        NOT NULL DEFAULT '';
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE notes
+        ADD COLUMN IF NOT EXISTS content TEXT
+        NOT NULL DEFAULT '';
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE notes
+        ADD COLUMN IF NOT EXISTS category VARCHAR(100)
+        NOT NULL DEFAULT 'Egyéb';
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE notes
+        ADD COLUMN IF NOT EXISTS pinned BOOLEAN
+        NOT NULL DEFAULT FALSE;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE notes
+        ADD COLUMN IF NOT EXISTS created_at
+        TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE notes
+        ADD COLUMN IF NOT EXISTS updated_at
+        TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    `);
+
+
+    // ==================================================
+    // OWNER TAG KITÖLTÉS
+    // ==================================================
+    //
+    // Csak olyan régi jegyzetnél lehet kitölteni,
+    // amelynek már van user_id-ja.
+    //
+    // A tag formátuma:
+    //
+    // USER-<user.id>
+    //
+    // Például:
+    // USER-1
+    // USER-2
+    // USER-15
+    //
+    // FONTOS:
+    // A tag NEM a frontendből érkezik.
+    // A backend generálja.
+    // ==================================================
+
+    await pool.query(`
+        UPDATE notes
+        SET owner_tag =
+            'USER-' || user_id::TEXT
+        WHERE owner_tag IS NULL
+          AND user_id IS NOT NULL;
+    `);
+
+
+    // ==================================================
+    // USER_ID -> USERS FOREIGN KEY
+    // ==================================================
+
+    await pool.query(`
+        DO $$
+        BEGIN
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_constraint
+                WHERE conname =
+                    'notes_user_id_fkey'
+            )
+            THEN
+
+                ALTER TABLE notes
+                ADD CONSTRAINT
+                    notes_user_id_fkey
+                FOREIGN KEY (user_id)
+                REFERENCES users(id)
+                ON DELETE CASCADE;
+
+            END IF;
+
+        END
+        $$;
+    `);
+
+
+    // ==================================================
+    // USER ID INDEX
+    // ==================================================
 
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
@@ -208,16 +346,34 @@ async function initializeDatabase() {
     `);
 
 
+    // ==================================================
+    // USER + UPDATED INDEX
+    // ==================================================
+
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
         notes_user_updated_idx
-        ON notes(user_id, updated_at DESC);
+        ON notes(
+            user_id,
+            updated_at DESC
+        );
     `);
 
 
-    // --------------------------------------------------
-    // DELETE EXPIRED TOKENS
-    // --------------------------------------------------
+    // ==================================================
+    // OWNER TAG INDEX
+    // ==================================================
+
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS
+        notes_owner_tag_idx
+        ON notes(owner_tag);
+    `);
+
+
+    // ==================================================
+    // EXPIRED TOKENS TÖRLÉSE
+    // ==================================================
 
     await pool.query(`
         DELETE FROM auth_tokens
@@ -244,15 +400,23 @@ function hashAuthToken(token) {
 }
 
 
-async function createAuthToken(userId) {
+// ======================================================
+// AUTH TOKEN LÉTREHOZÁSA
+// ======================================================
+
+async function createAuthToken(
+    userId
+) {
 
     const token =
         crypto
             .randomBytes(48)
             .toString("hex");
 
+
     const tokenHash =
         hashAuthToken(token);
+
 
     const expiresAt =
         new Date(
@@ -286,6 +450,10 @@ async function createAuthToken(userId) {
 }
 
 
+// ======================================================
+// BEARER TOKEN KINYERÉSE
+// ======================================================
+
 function getBearerToken(req) {
 
     const authorization =
@@ -296,7 +464,9 @@ function getBearerToken(req) {
         !authorization ||
         typeof authorization !== "string"
     ) {
+
         return null;
+
     }
 
 
@@ -305,20 +475,41 @@ function getBearerToken(req) {
             "Bearer "
         )
     ) {
+
         return null;
+
     }
 
 
-    return authorization
-        .substring(7)
-        .trim();
+    const token =
+        authorization
+            .substring(7)
+            .trim();
+
+
+    if (!token) {
+
+        return null;
+
+    }
+
+
+    return token;
 }
 
 
-async function getUserFromAuthToken(token) {
+// ======================================================
+// USER KERESÉSE TOKEN ALAPJÁN
+// ======================================================
+
+async function getUserFromAuthToken(
+    token
+) {
 
     if (!token) {
+
         return null;
+
     }
 
 
@@ -334,20 +525,29 @@ async function getUserFromAuthToken(token) {
                 u.username,
                 u.email
             FROM auth_tokens t
-            JOIN users u
+
+            INNER JOIN users u
                 ON u.id = t.user_id
+
             WHERE t.token_hash = $1
-              AND t.expires_at > CURRENT_TIMESTAMP
+
+              AND t.expires_at >
+                  CURRENT_TIMESTAMP
+
             LIMIT 1
             `,
-            [tokenHash]
+            [
+                tokenHash
+            ]
         );
 
 
     if (
         result.rows.length === 0
     ) {
+
         return null;
+
     }
 
 
@@ -355,7 +555,20 @@ async function getUserFromAuthToken(token) {
 }
 
 
-async function getAuthenticatedUser(req) {
+// ======================================================
+// ÁLTALÁNOS AUTH
+// ======================================================
+//
+// Ezt használjuk:
+// - auth/me
+// - egyéb általános funkciók
+//
+// Itt továbbra is engedélyezett a session fallback.
+// ======================================================
+
+async function getAuthenticatedUser(
+    req
+) {
 
     // --------------------------------------------------
     // BEARER TOKEN
@@ -374,13 +587,16 @@ async function getAuthenticatedUser(req) {
 
 
         if (tokenUser) {
+
             return tokenUser;
+
         }
+
     }
 
 
     // --------------------------------------------------
-    // SESSION
+    // SESSION FALLBACK
     // --------------------------------------------------
 
     if (
@@ -408,12 +624,85 @@ async function getAuthenticatedUser(req) {
         if (
             result.rows.length > 0
         ) {
+
             return result.rows[0];
+
         }
+
     }
 
 
     return null;
+}
+
+
+// ======================================================
+// JEGYZET AUTH
+// ======================================================
+//
+// FONTOS:
+//
+// A NOTES modul NEM használ session fallbacket.
+//
+// Csak:
+//
+// Bearer token
+//      ↓
+// auth_tokens
+//      ↓
+// user_id
+//      ↓
+// users.id
+//
+// Így a jegyzet tulajdonosa mindig a backend
+// által ellenőrzött tokenhez tartozó user.
+// ======================================================
+
+async function getAuthenticatedNotesUser(
+    req
+) {
+
+    const bearerToken =
+        getBearerToken(req);
+
+
+    if (!bearerToken) {
+
+        return null;
+
+    }
+
+
+    const user =
+        await getUserFromAuthToken(
+            bearerToken
+        );
+
+
+    if (!user) {
+
+        return null;
+
+    }
+
+
+    return user;
+}
+
+
+// ======================================================
+// OWNER TAG
+// ======================================================
+
+function createOwnerTag(
+    userId
+) {
+
+    return (
+        "USER-" +
+        String(userId)
+    );
+
 }
 
 
@@ -427,6 +716,7 @@ app.get(
 
         res.json({
             success: true,
+
             message:
                 "Project Hub backend működik."
         });
@@ -446,19 +736,24 @@ app.post(
         try {
 
             const username =
-                typeof req.body.username === "string"
+                typeof req.body.username ===
+                "string"
                     ? req.body.username.trim()
                     : "";
 
 
             const email =
-                typeof req.body.email === "string"
-                    ? req.body.email.trim().toLowerCase()
+                typeof req.body.email ===
+                "string"
+                    ? req.body.email
+                        .trim()
+                        .toLowerCase()
                     : "";
 
 
             const password =
-                typeof req.body.password === "string"
+                typeof req.body.password ===
+                "string"
                     ? req.body.password
                     : "";
 
@@ -483,9 +778,12 @@ app.post(
             ) {
 
                 return res.status(400).json({
+
                     success: false,
+
                     message:
                         "A felhasználónév, e-mail és jelszó kötelező."
+
                 });
 
             }
@@ -496,9 +794,12 @@ app.post(
             ) {
 
                 return res.status(400).json({
+
                     success: false,
+
                     message:
                         "A felhasználónév legalább 3 karakter legyen."
+
                 });
 
             }
@@ -509,9 +810,12 @@ app.post(
             ) {
 
                 return res.status(400).json({
+
                     success: false,
+
                     message:
                         "A jelszó legalább 6 karakter legyen."
+
                 });
 
             }
@@ -526,9 +830,12 @@ app.post(
             ) {
 
                 return res.status(400).json({
+
                     success: false,
+
                     message:
                         "Érvénytelen e-mail cím."
+
                 });
 
             }
@@ -543,10 +850,13 @@ app.post(
                     `
                     SELECT id
                     FROM users
-                    WHERE LOWER(username) = LOWER($1)
+                    WHERE LOWER(username) =
+                          LOWER($1)
                     LIMIT 1
                     `,
-                    [username]
+                    [
+                        username
+                    ]
                 );
 
 
@@ -555,9 +865,12 @@ app.post(
             ) {
 
                 return res.status(409).json({
+
                     success: false,
+
                     message:
                         "Ez a felhasználónév már foglalt."
+
                 });
 
             }
@@ -573,10 +886,13 @@ app.post(
                     SELECT id
                     FROM users
                     WHERE email IS NOT NULL
-                      AND LOWER(email) = LOWER($1)
+                      AND LOWER(email) =
+                          LOWER($1)
                     LIMIT 1
                     `,
-                    [email]
+                    [
+                        email
+                    ]
                 );
 
 
@@ -585,9 +901,12 @@ app.post(
             ) {
 
                 return res.status(409).json({
+
                     success: false,
+
                     message:
                         "Ez az e-mail cím már használatban van."
+
                 });
 
             }
@@ -605,7 +924,7 @@ app.post(
 
 
             // --------------------------------------------------
-            // CREATE USER
+            // USER LÉTREHOZÁSA
             // --------------------------------------------------
 
             const result =
@@ -616,7 +935,11 @@ app.post(
                         email,
                         password_hash
                     )
-                    VALUES ($1, $2, $3)
+                    VALUES (
+                        $1,
+                        $2,
+                        $3
+                    )
                     RETURNING
                         id,
                         username,
@@ -657,7 +980,7 @@ app.post(
 
 
             // --------------------------------------------------
-            // SAVE SESSION
+            // SESSION SAVE
             // --------------------------------------------------
 
             await new Promise(
@@ -670,10 +993,16 @@ app.post(
                         function (error) {
 
                             if (error) {
-                                reject(error);
+
+                                reject(
+                                    error
+                                );
+
                             }
                             else {
+
                                 resolve();
+
                             }
 
                         }
@@ -688,6 +1017,7 @@ app.post(
             // --------------------------------------------------
 
             return res.status(201).json({
+
                 success: true,
 
                 message:
@@ -696,12 +1026,18 @@ app.post(
                 token: token,
 
                 user: {
-                    id: user.id,
+
+                    id:
+                        user.id,
+
                     username:
                         user.username,
+
                     email:
                         user.email
+
                 }
+
             });
 
         }
@@ -714,9 +1050,12 @@ app.post(
 
 
             return res.status(500).json({
+
                 success: false,
+
                 message:
                     "Szerverhiba a regisztráció során."
+
             });
 
         }
@@ -736,13 +1075,15 @@ app.post(
         try {
 
             const login =
-                typeof req.body.login === "string"
+                typeof req.body.login ===
+                "string"
                     ? req.body.login.trim()
                     : "";
 
 
             const password =
-                typeof req.body.password === "string"
+                typeof req.body.password ===
+                "string"
                     ? req.body.password
                     : "";
 
@@ -763,9 +1104,12 @@ app.post(
             ) {
 
                 return res.status(400).json({
+
                     success: false,
+
                     message:
                         "Az e-mail/felhasználónév és a jelszó kötelező."
+
                 });
 
             }
@@ -773,7 +1117,6 @@ app.post(
 
             // --------------------------------------------------
             // USER SEARCH
-            // EMAIL OR USERNAME
             // --------------------------------------------------
 
             const result =
@@ -785,14 +1128,20 @@ app.post(
                         email,
                         password_hash
                     FROM users
-                    WHERE LOWER(username) = LOWER($1)
+                    WHERE LOWER(username) =
+                          LOWER($1)
+
                        OR (
                             email IS NOT NULL
-                            AND LOWER(email) = LOWER($1)
-                       )
+                            AND LOWER(email) =
+                                LOWER($1)
+                          )
+
                     LIMIT 1
                     `,
-                    [login]
+                    [
+                        login
+                    ]
                 );
 
 
@@ -801,9 +1150,12 @@ app.post(
             ) {
 
                 return res.status(401).json({
+
                     success: false,
+
                     message:
                         "Hibás e-mail/felhasználónév vagy jelszó."
+
                 });
 
             }
@@ -822,9 +1174,12 @@ app.post(
             ) {
 
                 return res.status(401).json({
+
                     success: false,
+
                     message:
                         "Ehhez a fiókhoz nincs érvényes jelszó beállítva."
+
                 });
 
             }
@@ -842,9 +1197,12 @@ app.post(
             ) {
 
                 return res.status(401).json({
+
                     success: false,
+
                     message:
                         "Hibás e-mail/felhasználónév vagy jelszó."
+
                 });
 
             }
@@ -885,10 +1243,16 @@ app.post(
                         function (error) {
 
                             if (error) {
-                                reject(error);
+
+                                reject(
+                                    error
+                                );
+
                             }
                             else {
+
                                 resolve();
+
                             }
 
                         }
@@ -903,6 +1267,7 @@ app.post(
             // --------------------------------------------------
 
             return res.json({
+
                 success: true,
 
                 message:
@@ -911,12 +1276,18 @@ app.post(
                 token: token,
 
                 user: {
-                    id: user.id,
+
+                    id:
+                        user.id,
+
                     username:
                         user.username,
+
                     email:
                         user.email
+
                 }
+
             });
 
         }
@@ -929,9 +1300,12 @@ app.post(
 
 
             return res.status(500).json({
+
                 success: false,
+
                 message:
                     "Szerverhiba a bejelentkezés során."
+
             });
 
         }
@@ -959,24 +1333,34 @@ app.get(
             if (!user) {
 
                 return res.status(401).json({
+
                     success: false,
+
                     message:
                         "Nincs bejelentkezett felhasználó."
+
                 });
 
             }
 
 
             return res.json({
+
                 success: true,
 
                 user: {
-                    id: user.id,
+
+                    id:
+                        user.id,
+
                     username:
                         user.username,
+
                     email:
                         user.email
+
                 }
+
             });
 
         }
@@ -989,9 +1373,12 @@ app.get(
 
 
             return res.status(500).json({
+
                 success: false,
+
                 message:
                     "Szerverhiba."
+
             });
 
         }
@@ -1010,13 +1397,13 @@ app.post(
 
         try {
 
-            // --------------------------------------------------
-            // DELETE TOKEN
-            // --------------------------------------------------
-
             const bearerToken =
                 getBearerToken(req);
 
+
+            // --------------------------------------------------
+            // TOKEN DELETE
+            // --------------------------------------------------
 
             if (bearerToken) {
 
@@ -1031,14 +1418,16 @@ app.post(
                     DELETE FROM auth_tokens
                     WHERE token_hash = $1
                     `,
-                    [tokenHash]
+                    [
+                        tokenHash
+                    ]
                 );
 
             }
 
 
             // --------------------------------------------------
-            // DESTROY SESSION
+            // SESSION DELETE
             // --------------------------------------------------
 
             if (req.session) {
@@ -1053,10 +1442,16 @@ app.post(
                             function (error) {
 
                                 if (error) {
-                                    reject(error);
+
+                                    reject(
+                                        error
+                                    );
+
                                 }
                                 else {
+
                                     resolve();
+
                                 }
 
                             }
@@ -1077,9 +1472,12 @@ app.post(
 
 
             return res.json({
+
                 success: true,
+
                 message:
                     "Sikeres kijelentkezés."
+
             });
 
         }
@@ -1092,9 +1490,12 @@ app.post(
 
 
             return res.status(500).json({
+
                 success: false,
+
                 message:
                     "Szerverhiba a kijelentkezés során."
+
             });
 
         }
@@ -1120,10 +1521,14 @@ app.get(
 
 
             return res.json({
+
                 success: true,
+
                 database: true,
+
                 time:
                     result.rows[0].now
+
             });
 
         }
@@ -1136,10 +1541,14 @@ app.get(
 
 
             return res.status(500).json({
+
                 success: false,
+
                 database: false,
+
                 message:
                     "Adatbázis hiba."
+
             });
 
         }
@@ -1151,6 +1560,17 @@ app.get(
 // ======================================================
 // NOTES - GET
 // ======================================================
+//
+// A usert KIZÁRÓLAG a Bearer tokenből kapjuk.
+//
+// Nincs:
+// req.body.user_id
+// req.query.user_id
+// frontend által küldött user ID
+//
+// A backend maga határozza meg:
+// token -> user.id
+// ======================================================
 
 app.get(
     "/api/notes",
@@ -1159,7 +1579,7 @@ app.get(
         try {
 
             const user =
-                await getAuthenticatedUser(
+                await getAuthenticatedNotesUser(
                     req
                 );
 
@@ -1167,12 +1587,21 @@ app.get(
             if (!user) {
 
                 return res.status(401).json({
+
                     success: false,
+
                     message:
-                        "Bejelentkezés szükséges."
+                        "Érvényes bejelentkezés szükséges a jegyzetekhez."
+
                 });
 
             }
+
+
+            const ownerTag =
+                createOwnerTag(
+                    user.id
+                );
 
 
             const result =
@@ -1180,26 +1609,49 @@ app.get(
                     `
                     SELECT
                         id,
+                        user_id,
+                        owner_tag,
                         title,
                         content,
                         category,
                         pinned,
                         created_at,
                         updated_at
+
                     FROM notes
+
                     WHERE user_id = $1
+
+                      AND owner_tag = $2
+
                     ORDER BY
                         pinned DESC,
                         updated_at DESC
                     `,
-                    [user.id]
+                    [
+                        user.id,
+                        ownerTag
+                    ]
                 );
 
 
             return res.json({
+
                 success: true,
+
+                user: {
+
+                    id:
+                        user.id,
+
+                    username:
+                        user.username
+
+                },
+
                 notes:
                     result.rows
+
             });
 
         }
@@ -1212,9 +1664,12 @@ app.get(
 
 
             return res.status(500).json({
+
                 success: false,
+
                 message:
                     "Nem sikerült betölteni a jegyzeteket."
+
             });
 
         }
@@ -1226,6 +1681,21 @@ app.get(
 // ======================================================
 // NOTES - CREATE
 // ======================================================
+//
+// FONTOS:
+//
+// A kliens által küldött user_id-t SOHA nem használjuk.
+//
+// A tulajdonos:
+//
+// const user = await getAuthenticatedNotesUser(req)
+//
+// majd:
+//
+// user.id
+//
+// kerül az adatbázisba.
+// ======================================================
 
 app.post(
     "/api/notes",
@@ -1234,7 +1704,7 @@ app.post(
         try {
 
             const user =
-                await getAuthenticatedUser(
+                await getAuthenticatedNotesUser(
                     req
                 );
 
@@ -1242,51 +1712,110 @@ app.post(
             if (!user) {
 
                 return res.status(401).json({
+
                     success: false,
+
                     message:
-                        "Bejelentkezés szükséges."
+                        "Érvényes bejelentkezés szükséges a jegyzethez."
+
                 });
 
             }
 
 
+            // --------------------------------------------------
+            // BACKEND ÁLTAL GENERÁLT TULAJDONOS
+            // --------------------------------------------------
+
+            const ownerUserId =
+                user.id;
+
+
+            const ownerTag =
+                createOwnerTag(
+                    ownerUserId
+                );
+
+
+            // --------------------------------------------------
+            // USER INPUT
+            // --------------------------------------------------
+
             const title =
-                typeof req.body.title === "string"
+                typeof req.body.title ===
+                "string"
                     ? req.body.title.trim()
                     : "";
 
 
             const content =
-                typeof req.body.content === "string"
+                typeof req.body.content ===
+                "string"
                     ? req.body.content
                     : "";
 
 
             const category =
-                typeof req.body.category === "string"
+                typeof req.body.category ===
+                "string"
                     ? req.body.category.trim()
                     : "Egyéb";
 
 
             const pinned =
-                Boolean(
-                    req.body.pinned
-                );
+                req.body.pinned === true;
 
+
+            // --------------------------------------------------
+            // VALIDATION
+            // --------------------------------------------------
+
+            if (
+                !title ||
+                !content
+            ) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "A cím és a jegyzet szövege kötelező."
+
+                });
+
+            }
+
+
+            // --------------------------------------------------
+            // CREATE
+            // --------------------------------------------------
 
             const result =
                 await pool.query(
                     `
                     INSERT INTO notes (
                         user_id,
+                        owner_tag,
                         title,
                         content,
                         category,
                         pinned
                     )
-                    VALUES ($1, $2, $3, $4, $5)
+
+                    VALUES (
+                        $1,
+                        $2,
+                        $3,
+                        $4,
+                        $5,
+                        $6
+                    )
+
                     RETURNING
                         id,
+                        user_id,
+                        owner_tag,
                         title,
                         content,
                         category,
@@ -1295,7 +1824,8 @@ app.post(
                         updated_at
                     `,
                     [
-                        user.id,
+                        ownerUserId,
+                        ownerTag,
                         title,
                         content,
                         category || "Egyéb",
@@ -1305,9 +1835,12 @@ app.post(
 
 
             return res.status(201).json({
+
                 success: true,
+
                 note:
                     result.rows[0]
+
             });
 
         }
@@ -1320,9 +1853,12 @@ app.post(
 
 
             return res.status(500).json({
+
                 success: false,
+
                 message:
                     "Nem sikerült létrehozni a jegyzetet."
+
             });
 
         }
@@ -1334,6 +1870,21 @@ app.post(
 // ======================================================
 // NOTES - UPDATE
 // ======================================================
+//
+// A jegyzet ID önmagában NEM elegendő.
+//
+// Kötelező:
+//
+// note.id = kérésben lévő ID
+//
+// ÉS
+//
+// note.user_id = tokenből kapott user.id
+//
+// ÉS
+//
+// note.owner_tag = tokenből generált owner tag
+// ======================================================
 
 app.put(
     "/api/notes/:id",
@@ -1342,7 +1893,7 @@ app.put(
         try {
 
             const user =
-                await getAuthenticatedUser(
+                await getAuthenticatedNotesUser(
                     req
                 );
 
@@ -1350,9 +1901,12 @@ app.put(
             if (!user) {
 
                 return res.status(401).json({
+
                     success: false,
+
                     message:
-                        "Bejelentkezés szükséges."
+                        "Érvényes bejelentkezés szükséges."
+
                 });
 
             }
@@ -1369,52 +1923,112 @@ app.put(
             ) {
 
                 return res.status(400).json({
+
                     success: false,
+
                     message:
                         "Érvénytelen jegyzet azonosító."
+
                 });
 
             }
 
 
+            const ownerUserId =
+                user.id;
+
+
+            const ownerTag =
+                createOwnerTag(
+                    ownerUserId
+                );
+
+
+            // --------------------------------------------------
+            // USER INPUT
+            // --------------------------------------------------
+
             const title =
-                typeof req.body.title === "string"
+                typeof req.body.title ===
+                "string"
                     ? req.body.title.trim()
                     : "";
 
 
             const content =
-                typeof req.body.content === "string"
+                typeof req.body.content ===
+                "string"
                     ? req.body.content
                     : "";
 
 
             const category =
-                typeof req.body.category === "string"
+                typeof req.body.category ===
+                "string"
                     ? req.body.category.trim()
                     : "Egyéb";
 
 
             const pinned =
-                Boolean(
-                    req.body.pinned
-                );
+                req.body.pinned === true;
 
+
+            // --------------------------------------------------
+            // VALIDATION
+            // --------------------------------------------------
+
+            if (
+                !title ||
+                !content
+            ) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "A cím és a jegyzet szövege kötelező."
+
+                });
+
+            }
+
+
+            // --------------------------------------------------
+            // UPDATE
+            // --------------------------------------------------
+            //
+            // Három tulajdonosi ellenőrzés:
+            //
+            // 1. note ID
+            // 2. user_id
+            // 3. owner_tag
+            //
+            // --------------------------------------------------
 
             const result =
                 await pool.query(
                     `
                     UPDATE notes
+
                     SET
                         title = $1,
                         content = $2,
                         category = $3,
                         pinned = $4,
-                        updated_at = CURRENT_TIMESTAMP
+                        updated_at =
+                            CURRENT_TIMESTAMP
+
                     WHERE id = $5
+
                       AND user_id = $6
+
+                      AND owner_tag = $7
+
                     RETURNING
                         id,
+                        user_id,
+                        owner_tag,
                         title,
                         content,
                         category,
@@ -1428,7 +2042,8 @@ app.put(
                         category || "Egyéb",
                         pinned,
                         noteId,
-                        user.id
+                        ownerUserId,
+                        ownerTag
                     ]
                 );
 
@@ -1438,18 +2053,24 @@ app.put(
             ) {
 
                 return res.status(404).json({
+
                     success: false,
+
                     message:
-                        "A jegyzet nem található."
+                        "A jegyzet nem található, vagy nem a te jegyzeted."
+
                 });
 
             }
 
 
             return res.json({
+
                 success: true,
+
                 note:
                     result.rows[0]
+
             });
 
         }
@@ -1462,9 +2083,12 @@ app.put(
 
 
             return res.status(500).json({
+
                 success: false,
+
                 message:
                     "Nem sikerült módosítani a jegyzetet."
+
             });
 
         }
@@ -1476,6 +2100,13 @@ app.put(
 // ======================================================
 // NOTES - DELETE
 // ======================================================
+//
+// Itt is:
+//
+// ID + user_id + owner_tag
+//
+// alapján történik az ellenőrzés.
+// ======================================================
 
 app.delete(
     "/api/notes/:id",
@@ -1484,7 +2115,7 @@ app.delete(
         try {
 
             const user =
-                await getAuthenticatedUser(
+                await getAuthenticatedNotesUser(
                     req
                 );
 
@@ -1492,9 +2123,12 @@ app.delete(
             if (!user) {
 
                 return res.status(401).json({
+
                     success: false,
+
                     message:
-                        "Bejelentkezés szükséges."
+                        "Érvényes bejelentkezés szükséges."
+
                 });
 
             }
@@ -1511,25 +2145,44 @@ app.delete(
             ) {
 
                 return res.status(400).json({
+
                     success: false,
+
                     message:
                         "Érvénytelen jegyzet azonosító."
+
                 });
 
             }
+
+
+            const ownerUserId =
+                user.id;
+
+
+            const ownerTag =
+                createOwnerTag(
+                    ownerUserId
+                );
 
 
             const result =
                 await pool.query(
                     `
                     DELETE FROM notes
+
                     WHERE id = $1
+
                       AND user_id = $2
+
+                      AND owner_tag = $3
+
                     RETURNING id
                     `,
                     [
                         noteId,
-                        user.id
+                        ownerUserId,
+                        ownerTag
                     ]
                 );
 
@@ -1539,18 +2192,24 @@ app.delete(
             ) {
 
                 return res.status(404).json({
+
                     success: false,
+
                     message:
-                        "A jegyzet nem található."
+                        "A jegyzet nem található, vagy nem a te jegyzeted."
+
                 });
 
             }
 
 
             return res.json({
+
                 success: true,
+
                 message:
                     "Jegyzet törölve."
+
             });
 
         }
@@ -1563,9 +2222,12 @@ app.delete(
 
 
             return res.status(500).json({
+
                 success: false,
+
                 message:
                     "Nem sikerült törölni a jegyzetet."
+
             });
 
         }
@@ -1587,9 +2249,12 @@ app.get(
             if (!STEAM_API_KEY) {
 
                 return res.status(500).json({
+
                     success: false,
+
                     message:
                         "A STEAM_API_KEY nincs beállítva."
+
                 });
 
             }
@@ -1618,9 +2283,12 @@ app.get(
             if (!response.ok) {
 
                 return res.status(502).json({
+
                     success: false,
+
                     message:
                         "A Steam API nem elérhető."
+
                 });
 
             }
@@ -1648,13 +2316,18 @@ app.get(
 
 
             return res.json({
+
                 success: true,
+
                 steamId:
                     STEAM_ID,
+
                 gameCount:
                     games.length,
+
                 games:
                     games
+
             });
 
         }
@@ -1667,9 +2340,12 @@ app.get(
 
 
             return res.status(500).json({
+
                 success: false,
+
                 message:
                     "Nem sikerült lekérni a Steam játékokat."
+
             });
 
         }
@@ -1699,14 +2375,19 @@ app.use(
         if (
             res.headersSent
         ) {
+
             return next(error);
+
         }
 
 
         return res.status(500).json({
+
             success: false,
+
             message:
                 "Belső szerverhiba."
+
         });
 
     }
