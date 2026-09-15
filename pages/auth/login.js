@@ -47,16 +47,49 @@ document.addEventListener("DOMContentLoaded", function () {
             event.preventDefault();
 
 
-            const email =
-                document
-                    .getElementById("email")
-                    .value
-                    .trim();
+            // =========================================
+            // ADATOK
+            // =========================================
+
+            const usernameInput =
+                document.getElementById("email");
+
+            const passwordInput =
+                document.getElementById("password");
+
+
+            if (
+                !usernameInput ||
+                !passwordInput
+            ) {
+
+                showError(
+                    "A bejelentkezési mezők nem találhatók."
+                );
+
+                return;
+            }
+
+
+            const username =
+                usernameInput.value.trim();
 
             const password =
-                document
-                    .getElementById("password")
-                    .value;
+                passwordInput.value;
+
+
+            // =========================================
+            // ÜRES MEZŐ ELLENŐRZÉS
+            // =========================================
+
+            if (!username || !password) {
+
+                showError(
+                    "A felhasználónév és a jelszó kötelező."
+                );
+
+                return;
+            }
 
 
             clearMessage();
@@ -91,7 +124,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                             body:
                                 JSON.stringify({
-                                    email: email,
+                                    username: username,
                                     password: password
                                 })
                         }
@@ -102,12 +135,23 @@ document.addEventListener("DOMContentLoaded", function () {
                     await response.json();
 
 
+                console.log(
+                    "LOGIN VÁLASZ:",
+                    result
+                );
+
+
+                // =========================================
+                // HIBA
+                // =========================================
+
                 if (!response.ok) {
 
                     throw new Error(
                         result.message ||
                         "A bejelentkezés sikertelen."
                     );
+
                 }
 
 
@@ -132,11 +176,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 // =========================================
-                // SIKER
+                // SIKERES LOGIN
                 // =========================================
 
                 showSuccess(
-                    "Sikeres bejelentkezés!"
+                    "✅ Sikeres bejelentkezés!"
                 );
 
 
@@ -147,7 +191,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 // =========================================
-                // SESSION / TOKEN ELLENŐRZÉS
+                // TOKEN LEKÉRÉSE
                 // =========================================
 
                 const authToken =
@@ -169,6 +213,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 }
 
+
+                // =========================================
+                // MUNKAMENET ELLENŐRZÉSE
+                // =========================================
 
                 const meResponse =
                     await fetch(
@@ -197,7 +245,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 // =========================================
-                // SESSION RENDBEN
+                // MUNKAMENET RENDBEN
                 // =========================================
 
                 if (
@@ -205,6 +253,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     meResult.success &&
                     meResult.user
                 ) {
+
+                    showSuccess(
+                        "✅ Sikeres bejelentkezés!"
+                    );
+
 
                     setTimeout(
                         function () {
@@ -250,6 +303,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 loginButton.textContent =
                     "Bejelentkezés";
+
             }
 
         }
@@ -267,6 +321,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         loginMessage.className =
             "login-message error";
+
     }
 
 
@@ -281,6 +336,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         loginMessage.className =
             "login-message success";
+
     }
 
 
@@ -295,6 +351,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         loginMessage.className =
             "login-message";
+
     }
 
 });
