@@ -20,6 +20,11 @@ const STEAM_ID =
     process.env.STEAM_ID ||
     "76561199059474054";
 
+
+// ======================================================
+// DATABASE
+// ======================================================
+
 const pool = new Pool({
     connectionString:
         process.env.DATABASE_URL,
@@ -28,8 +33,6 @@ const pool = new Pool({
         rejectUnauthorized: false
     }
 });
-
-
 
 
 // ======================================================
@@ -109,20 +112,41 @@ async function initializeDatabase() {
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             username VARCHAR(100) UNIQUE NOT NULL,
-            password TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            email VARCHAR(255),
+            password_hash TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     `);
 
-    // Régi adatbázisokhoz szükséges migration
-    await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN IF NOT EXISTS password TEXT;
-    `);
+
+    // --------------------------------------------------
+    // EXISTING DATABASE MIGRATIONS
+    // --------------------------------------------------
 
     await pool.query(`
         ALTER TABLE users
         ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS created_at
+        TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    `);
+
+
+    await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS updated_at
+        TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     `);
 
 
@@ -142,11 +166,13 @@ async function initializeDatabase() {
         );
     `);
 
+
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
         auth_tokens_user_id_idx
         ON auth_tokens(user_id);
     `);
+
 
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
@@ -174,11 +200,13 @@ async function initializeDatabase() {
         );
     `);
 
+
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
         notes_user_id_idx
         ON notes(user_id);
     `);
+
 
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
@@ -188,13 +216,14 @@ async function initializeDatabase() {
 
 
     // --------------------------------------------------
-    // EXPIRED TOKENS
+    // DELETE EXPIRED TOKENS
     // --------------------------------------------------
 
     await pool.query(`
         DELETE FROM auth_tokens
         WHERE expires_at < CURRENT_TIMESTAMP;
     `);
+
 
     console.log(
         "Adatbázis inicializálása kész."
@@ -218,7 +247,9 @@ function hashAuthToken(token) {
 async function createAuthToken(userId) {
 
     const token =
-        crypto.randomBytes(48).toString("hex");
+        crypto
+            .randomBytes(48)
+            .toString("hex");
 
     const tokenHash =
         hashAuthToken(token);
@@ -232,6 +263,7 @@ async function createAuthToken(userId) {
             24 *
             30
         );
+
 
     await pool.query(
         `
@@ -249,6 +281,7 @@ async function createAuthToken(userId) {
         ]
     );
 
+
     return token;
 }
 
@@ -258,12 +291,14 @@ function getBearerToken(req) {
     const authorization =
         req.headers.authorization;
 
+
     if (
         !authorization ||
         typeof authorization !== "string"
     ) {
         return null;
     }
+
 
     if (
         !authorization.startsWith(
@@ -272,6 +307,7 @@ function getBearerToken(req) {
     ) {
         return null;
     }
+
 
     return authorization
         .substring(7)
@@ -285,8 +321,10 @@ async function getUserFromAuthToken(token) {
         return null;
     }
 
+
     const tokenHash =
         hashAuthToken(token);
+
 
     const result =
         await pool.query(
@@ -305,11 +343,13 @@ async function getUserFromAuthToken(token) {
             [tokenHash]
         );
 
+
     if (
         result.rows.length === 0
     ) {
         return null;
     }
+
 
     return result.rows[0];
 }
@@ -318,11 +358,12 @@ async function getUserFromAuthToken(token) {
 async function getAuthenticatedUser(req) {
 
     // --------------------------------------------------
-    // FIRST: BEARER TOKEN
+    // BEARER TOKEN
     // --------------------------------------------------
 
     const bearerToken =
         getBearerToken(req);
+
 
     if (bearerToken) {
 
@@ -331,6 +372,7 @@ async function getAuthenticatedUser(req) {
                 bearerToken
             );
 
+
         if (tokenUser) {
             return tokenUser;
         }
@@ -338,10 +380,13 @@ async function getAuthenticatedUser(req) {
 
 
     // --------------------------------------------------
-    // SECOND: SESSION
+    // SESSION
     // --------------------------------------------------
 
-    if (req.session?.userId) {
+    if (
+        req.session &&
+        req.session.userId
+    ) {
 
         const result =
             await pool.query(
@@ -354,8 +399,11 @@ async function getAuthenticatedUser(req) {
                 WHERE id = $1
                 LIMIT 1
                 `,
-                [req.session.userId]
+                [
+                    req.session.userId
+                ]
             );
+
 
         if (
             result.rows.length > 0
@@ -363,6 +411,7 @@ async function getAuthenticatedUser(req) {
             return result.rows[0];
         }
     }
+
 
     return null;
 }
@@ -387,7 +436,7 @@ app.get(
 
 
 // ======================================================
-// AUTH - REGISTER
+// REGISTER
 // ======================================================
 
 app.post(
@@ -401,15 +450,26 @@ app.post(
                     ? req.body.username.trim()
                     : "";
 
+
             const email =
                 typeof req.body.email === "string"
                     ? req.body.email.trim().toLowerCase()
                     : "";
 
+
             const password =
                 typeof req.body.password === "string"
                     ? req.body.password
                     : "";
+
+
+            console.log(
+                "Regisztráció:",
+                {
+                    username,
+                    email
+                }
+            );
 
 
             // --------------------------------------------------
@@ -457,10 +517,9 @@ app.post(
             }
 
 
-            // Egyszerű e-mail ellenőrzés
-
             const emailRegex =
                 /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 
             if (
                 !emailRegex.test(email)
@@ -555,7 +614,7 @@ app.post(
                     INSERT INTO users (
                         username,
                         email,
-                        password
+                        password_hash
                     )
                     VALUES ($1, $2, $3)
                     RETURNING
@@ -596,6 +655,10 @@ app.post(
                     user.id
                 );
 
+
+            // --------------------------------------------------
+            // SAVE SESSION
+            // --------------------------------------------------
 
             await new Promise(
                 function (
@@ -649,6 +712,7 @@ app.post(
                 error
             );
 
+
             return res.status(500).json({
                 success: false,
                 message:
@@ -662,7 +726,7 @@ app.post(
 
 
 // ======================================================
-// AUTH - LOGIN
+// LOGIN
 // ======================================================
 
 app.post(
@@ -676,10 +740,17 @@ app.post(
                     ? req.body.login.trim()
                     : "";
 
+
             const password =
                 typeof req.body.password === "string"
                     ? req.body.password
                     : "";
+
+
+            console.log(
+                "Bejelentkezési kísérlet:",
+                login
+            );
 
 
             // --------------------------------------------------
@@ -701,7 +772,7 @@ app.post(
 
 
             // --------------------------------------------------
-            // FIND USER
+            // USER SEARCH
             // EMAIL OR USERNAME
             // --------------------------------------------------
 
@@ -712,7 +783,7 @@ app.post(
                         id,
                         username,
                         email,
-                        password
+                        password_hash
                     FROM users
                     WHERE LOWER(username) = LOWER($1)
                        OR (
@@ -747,13 +818,13 @@ app.post(
             // --------------------------------------------------
 
             if (
-                !user.password
+                !user.password_hash
             ) {
 
                 return res.status(401).json({
                     success: false,
                     message:
-                        "Ehhez a fiókhoz még nincs érvényes jelszó beállítva."
+                        "Ehhez a fiókhoz nincs érvényes jelszó beállítva."
                 });
 
             }
@@ -762,7 +833,7 @@ app.post(
             const passwordValid =
                 await bcrypt.compare(
                     password,
-                    user.password
+                    user.password_hash
                 );
 
 
@@ -799,6 +870,10 @@ app.post(
                     user.id
                 );
 
+
+            // --------------------------------------------------
+            // SAVE SESSION
+            // --------------------------------------------------
 
             await new Promise(
                 function (
@@ -852,6 +927,7 @@ app.post(
                 error
             );
 
+
             return res.status(500).json({
                 success: false,
                 message:
@@ -865,7 +941,7 @@ app.post(
 
 
 // ======================================================
-// AUTH - ME
+// AUTH ME
 // ======================================================
 
 app.get(
@@ -911,6 +987,7 @@ app.get(
                 error
             );
 
+
             return res.status(500).json({
                 success: false,
                 message:
@@ -924,7 +1001,7 @@ app.get(
 
 
 // ======================================================
-// AUTH - LOGOUT
+// LOGOUT
 // ======================================================
 
 app.post(
@@ -934,7 +1011,7 @@ app.post(
         try {
 
             // --------------------------------------------------
-            // DELETE BEARER TOKEN
+            // DELETE TOKEN
             // --------------------------------------------------
 
             const bearerToken =
@@ -947,6 +1024,7 @@ app.post(
                     hashAuthToken(
                         bearerToken
                     );
+
 
                 await pool.query(
                     `
@@ -1012,6 +1090,7 @@ app.post(
                 error
             );
 
+
             return res.status(500).json({
                 success: false,
                 message:
@@ -1039,6 +1118,7 @@ app.get(
                     "SELECT NOW() AS now"
                 );
 
+
             return res.json({
                 success: true,
                 database: true,
@@ -1054,6 +1134,7 @@ app.get(
                 error
             );
 
+
             return res.status(500).json({
                 success: false,
                 database: false,
@@ -1068,7 +1149,7 @@ app.get(
 
 
 // ======================================================
-// NOTES - GET ALL
+// NOTES - GET
 // ======================================================
 
 app.get(
@@ -1129,6 +1210,7 @@ app.get(
                 error
             );
 
+
             return res.status(500).json({
                 success: false,
                 message:
@@ -1173,15 +1255,18 @@ app.post(
                     ? req.body.title.trim()
                     : "";
 
+
             const content =
                 typeof req.body.content === "string"
                     ? req.body.content
                     : "";
 
+
             const category =
                 typeof req.body.category === "string"
                     ? req.body.category.trim()
                     : "Egyéb";
+
 
             const pinned =
                 Boolean(
@@ -1232,6 +1317,7 @@ app.post(
                 "NOTE CREATE HIBA:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
@@ -1296,15 +1382,18 @@ app.put(
                     ? req.body.title.trim()
                     : "";
 
+
             const content =
                 typeof req.body.content === "string"
                     ? req.body.content
                     : "";
 
+
             const category =
                 typeof req.body.category === "string"
                     ? req.body.category.trim()
                     : "Egyéb";
+
 
             const pinned =
                 Boolean(
@@ -1370,6 +1459,7 @@ app.put(
                 "NOTE UPDATE HIBA:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
@@ -1471,6 +1561,7 @@ app.delete(
                 error
             );
 
+
             return res.status(500).json({
                 success: false,
                 message:
@@ -1484,7 +1575,7 @@ app.delete(
 
 
 // ======================================================
-// STEAM - GAMES
+// STEAM GAMES
 // ======================================================
 
 app.get(
@@ -1574,6 +1665,7 @@ app.get(
                 error
             );
 
+
             return res.status(500).json({
                 success: false,
                 message:
@@ -1587,7 +1679,7 @@ app.get(
 
 
 // ======================================================
-// ERROR HANDLER
+// GLOBAL ERROR HANDLER
 // ======================================================
 
 app.use(
@@ -1603,11 +1695,13 @@ app.use(
             error
         );
 
+
         if (
             res.headersSent
         ) {
             return next(error);
         }
+
 
         return res.status(500).json({
             success: false,
@@ -1628,6 +1722,7 @@ async function startServer() {
     try {
 
         await initializeDatabase();
+
 
         app.listen(
             PORT,
