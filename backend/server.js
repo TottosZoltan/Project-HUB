@@ -32,50 +32,6 @@ const pool = new Pool({
 
 
 
-app.get(
-    "/api/admin/reset-users-7f4c91",
-    async function (req, res) {
-
-        try {
-
-            await pool.query(
-                "TRUNCATE TABLE users RESTART IDENTITY CASCADE"
-            );
-
-            return res.json({
-                success: true,
-                message:
-                    "Minden felhasználó és kapcsolódó adat törölve."
-            });
-
-        }
-        catch (error) {
-
-            console.error(
-                "RESET HIBA:",
-                error
-            );
-
-            return res.status(500).json({
-                success: false,
-                message:
-                    "Nem sikerült törölni az adatokat."
-            });
-
-        }
-
-    }
-);
-
-
-
-
-
-
-
-
-
-
 // ======================================================
 // MIDDLEWARE
 // ======================================================
