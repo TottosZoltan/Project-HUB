@@ -1,343 +1,472 @@
-document.addEventListener("DOMContentLoaded", function () {
+<!DOCTYPE html>
+<html lang="hu">
 
-    // =========================================
-    // BACKEND
-    // =========================================
+<head>
 
-    const BACKEND_URL =
-        "https://project-hub-backend-1.onrender.com";
+    <meta charset="UTF-8">
 
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    // =========================================
-    // ELEMEK
-    // =========================================
+    <title>Bejelentkezés - Project Hub</title>
 
-    const loginForm =
-        document.getElementById("loginForm");
+    <link
+        rel="stylesheet"
+        href="../../style.css"
+    >
 
-    const loginButton =
-        document.getElementById("loginButton");
+    <link
+        rel="stylesheet"
+        href="../pages.css"
+    >
 
-    const loginMessage =
-        document.getElementById("loginMessage");
+    <link
+        rel="stylesheet"
+        href="login.css"
+    >
 
+</head>
 
-    if (
-        !loginForm ||
-        !loginButton ||
-        !loginMessage
-    ) {
+<body>
 
-        console.error(
-            "A bejelentkezési oldal egyik eleme hiányzik."
-        );
+    <header class="header">
 
-        return;
-    }
+        <div>
 
+            <h1>BEJELENTKEZÉS</h1>
 
-    // =========================================
-    // BEJELENTKEZÉS
-    // =========================================
+            <p>
+                Project Hub
+            </p>
 
-    loginForm.addEventListener(
-        "submit",
-        async function (event) {
+        </div>
 
-            event.preventDefault();
+        <a
+            href="../../index.html"
+            class="back-button"
+        >
+            <span class="back-arrow"></span>
+        </a>
 
-
-            const email =
-                document
-                    .getElementById("email")
-                    .value
-                    .trim();
-
-            const password =
-                document
-                    .getElementById("password")
-                    .value;
+    </header>
 
 
-            // =========================================
-            // ÜRES MEZŐK
-            // =========================================
+    <main class="page-content login-page">
 
-            if (!email || !password) {
+        <section class="page-intro">
 
-                showError(
-                    "Az e-mail cím és a jelszó kötelező."
-                );
+            <p class="small-title">
+                PROJECT HUB
+            </p>
 
-                return;
-            }
+            <h2>
+                🔐 Üdv újra!
+            </h2>
 
+            <p>
+                Jelentkezz be a Project Hub fiókodba.
+            </p>
 
-            clearMessage();
-
-
-            loginButton.disabled = true;
-
-            loginButton.textContent =
-                "Bejelentkezés...";
+        </section>
 
 
-            try {
+        <section class="page-section login-section">
 
-                // =========================================
-                // LOGIN
-                // =========================================
+            <form id="loginForm">
 
-                const response =
-                    await fetch(
-                        BACKEND_URL +
-                        "/api/auth/login",
-                        {
-                            method: "POST",
+                <div class="form-group">
 
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
+                    <label for="email">
+                        E-mail cím
+                    </label>
 
-                            credentials:
-                                "include",
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="pelda@email.com"
+                        autocomplete="email"
+                        required
+                    >
 
-                            body:
-                                JSON.stringify({
+                </div>
 
-                                    // A jelenlegi login oldal
-                                    // e-mail címet használ.
-                                    email: email,
 
-                                    // Kompatibilitás a backend
-                                    // username alapú változatával.
-                                    username: email,
+                <div class="form-group">
 
-                                    password: password
+                    <label for="password">
+                        Jelszó
+                    </label>
 
-                                })
-                        }
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Jelszó"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                </div>
+
+
+                <div
+                    id="loginMessage"
+                    class="login-message"
+                ></div>
+
+
+                <button
+                    type="submit"
+                    id="loginButton"
+                    class="login-button"
+                >
+                    Bejelentkezés
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <section class="login-register">
+
+            <p>
+                Még nincs fiókod?
+            </p>
+
+            <a href="register.html">
+                Regisztráció
+            </a>
+
+        </section>
+
+    </main>
+
+
+    <!-- =========================================
+         BEJELENTKEZÉS JAVASCRIPT
+         ========================================= -->
+
+    <script>
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                const BACKEND_URL =
+                    "https://project-hub-backend-1.onrender.com";
+
+
+                const loginForm =
+                    document.getElementById(
+                        "loginForm"
+                    );
+
+                const loginButton =
+                    document.getElementById(
+                        "loginButton"
+                    );
+
+                const loginMessage =
+                    document.getElementById(
+                        "loginMessage"
+                    );
+
+                const emailInput =
+                    document.getElementById(
+                        "email"
+                    );
+
+                const passwordInput =
+                    document.getElementById(
+                        "password"
                     );
 
 
-                const result =
-                    await response.json();
-
-
-                console.log(
-                    "LOGIN VÁLASZ:",
-                    result
-                );
-
-
                 // =========================================
-                // HIBA
-                // =========================================
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        result.message ||
-                        "A bejelentkezés sikertelen."
-                    );
-
-                }
-
-
-                // =========================================
-                // AUTH TOKEN MENTÉSE
-                // =========================================
-
-                if (result.token) {
-
-                    localStorage.setItem(
-                        "projectHubAuthToken",
-                        result.token
-                    );
-
-                    console.log(
-                        "Auth token sikeresen elmentve."
-                    );
-
-                }
-
-
-                // =========================================
-                // SIKER
-                // =========================================
-
-                showSuccess(
-                    "✅ Sikeres bejelentkezés!"
-                );
-
-
-                console.log(
-                    "Bejelentkezett felhasználó:",
-                    result.user
-                );
-
-
-                // =========================================
-                // TOKEN LEKÉRÉSE
-                // =========================================
-
-                const authToken =
-                    localStorage.getItem(
-                        "projectHubAuthToken"
-                    );
-
-
-                const requestHeaders = {};
-
-
-                if (authToken) {
-
-                    requestHeaders.Authorization =
-                        "Bearer " +
-                        authToken;
-
-                }
-
-
-                // =========================================
-                // AUTH ELLENŐRZÉS
-                // =========================================
-
-                const meResponse =
-                    await fetch(
-                        BACKEND_URL +
-                        "/api/auth/me",
-                        {
-                            method: "GET",
-
-                            headers:
-                                requestHeaders,
-
-                            credentials:
-                                "include"
-                        }
-                    );
-
-
-                const meResult =
-                    await meResponse.json();
-
-
-                console.log(
-                    "Session ellenőrzés:",
-                    meResult
-                );
-
-
-                // =========================================
-                // MUNKAMENET RENDBEN
+                // ELLENŐRZÉS
                 // =========================================
 
                 if (
-                    meResponse.ok &&
-                    meResult.success &&
-                    meResult.user
+                    !loginForm ||
+                    !loginButton ||
+                    !loginMessage ||
+                    !emailInput ||
+                    !passwordInput
                 ) {
 
-                    showSuccess(
-                        "✅ Sikeres bejelentkezés!"
+                    console.error(
+                        "HIBA: A bejelentkezési oldal egyik eleme hiányzik."
                     );
 
+                    return;
+                }
 
-                    setTimeout(
-                        function () {
 
-                            window.location.href =
-                                "../../index.html";
+                // =========================================
+                // HIBA ÜZENET
+                // =========================================
 
-                        },
-                        800
-                    );
+                function showError(
+                    message
+                ) {
+
+                    loginMessage.textContent =
+                        message;
+
+                    loginMessage.className =
+                        "login-message error";
 
                 }
 
-                else {
 
-                    showError(
-                        "A bejelentkezés sikerült, de a munkamenetet nem sikerült ellenőrizni."
-                    );
+                // =========================================
+                // SIKER ÜZENET
+                // =========================================
+
+                function showSuccess(
+                    message
+                ) {
+
+                    loginMessage.textContent =
+                        message;
+
+                    loginMessage.className =
+                        "login-message success";
 
                 }
 
-            }
 
-            catch (error) {
+                // =========================================
+                // ÜZENET TÖRLÉSE
+                // =========================================
 
-                console.error(
-                    "Bejelentkezési hiba:",
-                    error
+                function clearMessage() {
+
+                    loginMessage.textContent =
+                        "";
+
+                    loginMessage.className =
+                        "login-message";
+
+                }
+
+
+                // =========================================
+                // BEJELENTKEZÉS
+                // =========================================
+
+                loginForm.addEventListener(
+                    "submit",
+                    async function (event) {
+
+                        event.preventDefault();
+
+
+                        const email =
+                            emailInput.value.trim();
+
+                        const password =
+                            passwordInput.value;
+
+
+                        // =========================================
+                        // ÜRES MEZŐK
+                        // =========================================
+
+                        if (
+                            !email ||
+                            !password
+                        ) {
+
+                            showError(
+                                "Az e-mail cím és a jelszó kötelező."
+                            );
+
+                            return;
+                        }
+
+
+                        clearMessage();
+
+
+                        loginButton.disabled =
+                            true;
+
+                        loginButton.textContent =
+                            "Bejelentkezés...";
+
+
+                        try {
+
+                            console.log(
+                                "Bejelentkezés indítása..."
+                            );
+
+
+                            // =========================================
+                            // LOGIN KÉRÉS
+                            // =========================================
+
+                            const response =
+                                await fetch(
+                                    BACKEND_URL +
+                                    "/api/auth/login",
+                                    {
+                                        method:
+                                            "POST",
+
+                                        headers: {
+                                            "Content-Type":
+                                                "application/json"
+                                        },
+
+                                        credentials:
+                                            "include",
+
+                                        body:
+                                            JSON.stringify({
+
+                                                username:
+                                                    email,
+
+                                                password:
+                                                    password
+
+                                            })
+                                    }
+                                );
+
+
+                            // =========================================
+                            // VÁLASZ
+                            // =========================================
+
+                            const result =
+                                await response.json();
+
+
+                            console.log(
+                                "LOGIN VÁLASZ:",
+                                result
+                            );
+
+
+                            // =========================================
+                            // HIBA
+                            // =========================================
+
+                            if (
+                                !response.ok
+                            ) {
+
+                                throw new Error(
+                                    result.message ||
+                                    "A bejelentkezés sikertelen."
+                                );
+
+                            }
+
+
+                            // =========================================
+                            // TOKEN ELLENŐRZÉS
+                            // =========================================
+
+                            if (
+                                !result.token
+                            ) {
+
+                                console.error(
+                                    "A backend nem küldött auth tokent."
+                                );
+
+                                throw new Error(
+                                    "A bejelentkezés sikerült, de az authentikációs token hiányzik."
+                                );
+
+                            }
+
+
+                            // =========================================
+                            // TOKEN MENTÉSE
+                            // =========================================
+
+                            localStorage.setItem(
+                                "projectHubAuthToken",
+                                result.token
+                            );
+
+
+                            console.log(
+                                "Auth token elmentve."
+                            );
+
+
+                            // =========================================
+                            // SIKER
+                            // =========================================
+
+                            showSuccess(
+                                "✅ Sikeres bejelentkezés!"
+                            );
+
+
+                            console.log(
+                                "Bejelentkezett felhasználó:",
+                                result.user
+                            );
+
+
+                            // =========================================
+                            // FŐOLDALRA LÉPÉS
+                            // =========================================
+
+                            setTimeout(
+                                function () {
+
+                                    window.location.href =
+                                        "../../index.html";
+
+                                },
+                                700
+                            );
+
+                        }
+                        catch (error) {
+
+                            console.error(
+                                "Bejelentkezési hiba:",
+                                error
+                            );
+
+
+                            showError(
+                                error.message ||
+                                "Nem sikerült bejelentkezni."
+                            );
+
+                        }
+                        finally {
+
+                            loginButton.disabled =
+                                false;
+
+                            loginButton.textContent =
+                                "Bejelentkezés";
+
+                        }
+
+                    }
                 );
 
-
-                showError(
-                    error.message ||
-                    "Nem sikerült bejelentkezni."
-                );
-
             }
+        );
 
-            finally {
+    </script>
 
-                loginButton.disabled =
-                    false;
+</body>
 
-                loginButton.textContent =
-                    "Bejelentkezés";
-
-            }
-
-        }
-    );
-
-
-    // =========================================
-    // HIBA
-    // =========================================
-
-    function showError(message) {
-
-        loginMessage.textContent =
-            message;
-
-        loginMessage.className =
-            "login-message error";
-
-    }
-
-
-    // =========================================
-    // SIKER
-    // =========================================
-
-    function showSuccess(message) {
-
-        loginMessage.textContent =
-            message;
-
-        loginMessage.className =
-            "login-message success";
-
-    }
-
-
-    // =========================================
-    // ÜZENET TÖRLÉSE
-    // =========================================
-
-    function clearMessage() {
-
-        loginMessage.textContent =
-            "";
-
-        loginMessage.className =
-            "login-message";
-
-    }
-
-});
+</html>
