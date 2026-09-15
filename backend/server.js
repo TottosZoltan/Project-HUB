@@ -10,6 +10,7 @@ const cors = require("cors");
 
 const { Pool } = require("pg");
 
+const bcrypt = require("bcrypt");
 
 // =========================================
 // EXPRESS
@@ -139,7 +140,186 @@ app.get(
 
     }
 );
+// =========================================
+// REGISZTRÁCIÓ
+// =========================================
 
+app.post(
+    "/api/auth/register",
+    async function (req, res) {
+
+        try {
+
+            const {
+                username,
+                email,
+                password
+            } = req.body;
+
+
+            // =========================================
+            // ELLENŐRZÉS
+            // =========================================
+
+            if (
+                !username ||
+                !email ||
+                !password
+            ) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "Minden mező kitöltése kötelező."
+
+                });
+
+            }
+
+
+            if (password.length < 8) {
+
+                return res.status(400).json({
+
+                    success: false,
+
+                    message:
+                        "A jelszónak legalább 8 karakteresnek kell lennie."
+
+                });
+
+            }
+
+
+            // =========================================
+            // FELHASZNÁLÓNÉV / EMAIL ELLENŐRZÉSE
+            // =========================================
+
+            const existingUser =
+                await pool.query(
+
+                    `
+                    SELECT id
+                    FROM users
+                    WHERE username = $1
+                       OR email = $2
+                    LIMIT 1
+                    `,
+
+                    [
+                        username.trim(),
+                        email.trim().toLowerCase()
+                    ]
+
+                );
+
+
+            if (
+                existingUser.rows.length > 0
+            ) {
+
+                return res.status(409).json({
+
+                    success: false,
+
+                    message:
+                        "Ez a felhasználónév vagy e-mail már használatban van."
+
+                });
+
+            }
+
+
+            // =========================================
+            // JELSZÓ HASH
+            // =========================================
+
+            const passwordHash =
+                await bcrypt.hash(
+                    password,
+                    12
+                );
+
+
+            // =========================================
+            // FELHASZNÁLÓ LÉTREHOZÁSA
+            // =========================================
+
+            const result =
+                await pool.query(
+
+                    `
+                    INSERT INTO users
+                    (
+                        username,
+                        email,
+                        password_hash
+                    )
+
+                    VALUES
+                    (
+                        $1,
+                        $2,
+                        $3
+                    )
+
+                    RETURNING
+                        id,
+                        username,
+                        email,
+                        created_at
+                    `,
+
+                    [
+                        username.trim(),
+                        email.trim().toLowerCase(),
+                        passwordHash
+                    ]
+
+                );
+
+
+            // =========================================
+            // SIKERES REGISZTRÁCIÓ
+            // =========================================
+
+            res.status(201).json({
+
+                success: true,
+
+                message:
+                    "A regisztráció sikeres.",
+
+                user:
+                    result.rows[0]
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Regisztrációs hiba:",
+                error
+            );
+
+
+            res.status(500).json({
+
+                success: false,
+
+                message:
+                    "Nem sikerült létrehozni a felhasználót."
+
+            });
+
+        }
+
+    }
+);
 
 // =========================================
 // ADATBÁZIS TESZT
