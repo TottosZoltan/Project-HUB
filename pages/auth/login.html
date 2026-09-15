@@ -78,16 +78,16 @@
 
                 <div class="form-group">
 
-                    <label for="email">
-                        E-mail cím
+                    <label for="login">
+                        E-mail vagy felhasználónév
                     </label>
 
                     <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        placeholder="pelda@email.com"
-                        autocomplete="email"
+                        type="text"
+                        id="login"
+                        name="login"
+                        placeholder="E-mail vagy felhasználónév"
+                        autocomplete="username"
                         required
                     >
 
@@ -146,10 +146,6 @@
     </main>
 
 
-    <!-- =========================================
-         BEJELENTKEZÉS JAVASCRIPT
-         ========================================= -->
-
     <script>
 
         document.addEventListener(
@@ -175,9 +171,9 @@
                         "loginMessage"
                     );
 
-                const emailInput =
+                const loginInput =
                     document.getElementById(
-                        "email"
+                        "login"
                     );
 
                 const passwordInput =
@@ -186,33 +182,23 @@
                     );
 
 
-                // =========================================
-                // ELLENŐRZÉS
-                // =========================================
-
                 if (
                     !loginForm ||
                     !loginButton ||
                     !loginMessage ||
-                    !emailInput ||
+                    !loginInput ||
                     !passwordInput
                 ) {
 
                     console.error(
-                        "HIBA: A bejelentkezési oldal egyik eleme hiányzik."
+                        "A bejelentkezési oldal egyik eleme hiányzik."
                     );
 
                     return;
                 }
 
 
-                // =========================================
-                // HIBA ÜZENET
-                // =========================================
-
-                function showError(
-                    message
-                ) {
+                function showError(message) {
 
                     loginMessage.textContent =
                         message;
@@ -223,13 +209,7 @@
                 }
 
 
-                // =========================================
-                // SIKER ÜZENET
-                // =========================================
-
-                function showSuccess(
-                    message
-                ) {
+                function showSuccess(message) {
 
                     loginMessage.textContent =
                         message;
@@ -239,10 +219,6 @@
 
                 }
 
-
-                // =========================================
-                // ÜZENET TÖRLÉSE
-                // =========================================
 
                 function clearMessage() {
 
@@ -255,10 +231,6 @@
                 }
 
 
-                // =========================================
-                // BEJELENTKEZÉS
-                // =========================================
-
                 loginForm.addEventListener(
                     "submit",
                     async function (event) {
@@ -266,24 +238,20 @@
                         event.preventDefault();
 
 
-                        const email =
-                            emailInput.value.trim();
+                        const login =
+                            loginInput.value.trim();
 
                         const password =
                             passwordInput.value;
 
 
-                        // =========================================
-                        // ÜRES MEZŐK
-                        // =========================================
-
                         if (
-                            !email ||
+                            !login ||
                             !password
                         ) {
 
                             showError(
-                                "Az e-mail cím és a jelszó kötelező."
+                                "Az e-mail/felhasználónév és a jelszó kötelező."
                             );
 
                             return;
@@ -307,10 +275,6 @@
                             );
 
 
-                            // =========================================
-                            // LOGIN KÉRÉS
-                            // =========================================
-
                             const response =
                                 await fetch(
                                     BACKEND_URL +
@@ -330,20 +294,17 @@
                                         body:
                                             JSON.stringify({
 
-                                                username:
-                                                    email,
+                                                login:
+                                                    login,
 
                                                 password:
                                                     password
 
                                             })
+
                                     }
                                 );
 
-
-                            // =========================================
-                            // VÁLASZ
-                            // =========================================
 
                             const result =
                                 await response.json();
@@ -354,10 +315,6 @@
                                 result
                             );
 
-
-                            // =========================================
-                            // HIBA
-                            // =========================================
 
                             if (
                                 !response.ok
@@ -371,28 +328,16 @@
                             }
 
 
-                            // =========================================
-                            // TOKEN ELLENŐRZÉS
-                            // =========================================
-
                             if (
                                 !result.token
                             ) {
 
-                                console.error(
-                                    "A backend nem küldött auth tokent."
-                                );
-
                                 throw new Error(
-                                    "A bejelentkezés sikerült, de az authentikációs token hiányzik."
+                                    "A bejelentkezés sikerült, de az auth token hiányzik."
                                 );
 
                             }
 
-
-                            // =========================================
-                            // TOKEN MENTÉSE
-                            // =========================================
 
                             localStorage.setItem(
                                 "projectHubAuthToken",
@@ -405,10 +350,6 @@
                             );
 
 
-                            // =========================================
-                            // SIKER
-                            // =========================================
-
                             showSuccess(
                                 "✅ Sikeres bejelentkezés!"
                             );
@@ -419,10 +360,6 @@
                                 result.user
                             );
 
-
-                            // =========================================
-                            // FŐOLDALRA LÉPÉS
-                            // =========================================
 
                             setTimeout(
                                 function () {
