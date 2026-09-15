@@ -187,6 +187,23 @@ async function initializeDatabase() {
     // ==================================================
     // NOTES
     // ==================================================
+    //
+    // FONTOS:
+    //
+    // A jelenlegi adatbázisban van:
+    //
+    // text
+    //
+    // és az új rendszerben:
+    //
+    // content
+    //
+    // Ezért mindkettőt megtartjuk.
+    //
+    // A backend mindig ugyanazt az értéket írja
+    // mindkét mezőbe.
+    //
+    // ==================================================
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS notes (
@@ -199,6 +216,8 @@ async function initializeDatabase() {
             owner_tag TEXT NOT NULL,
 
             title TEXT NOT NULL DEFAULT '',
+
+            text TEXT NOT NULL DEFAULT '',
 
             content TEXT NOT NULL DEFAULT '',
 
@@ -240,6 +259,21 @@ async function initializeDatabase() {
     `);
 
 
+    // ----------------------------------------------
+    // RÉGI TEXT MEZŐ
+    // ----------------------------------------------
+
+    await pool.query(`
+        ALTER TABLE notes
+        ADD COLUMN IF NOT EXISTS text TEXT
+        NOT NULL DEFAULT '';
+    `);
+
+
+    // ----------------------------------------------
+    // ÚJ CONTENT MEZŐ
+    // ----------------------------------------------
+
     await pool.query(`
         ALTER TABLE notes
         ADD COLUMN IF NOT EXISTS content TEXT
@@ -276,37 +310,70 @@ async function initializeDatabase() {
 
 
     // ==================================================
-    // OWNER TAG KITÖLTÉS
+    // TEXT <-> CONTENT SZINKRONIZÁLÁS
     // ==================================================
     //
-    // Csak olyan régi jegyzetnél lehet kitölteni,
-    // amelynek már van user_id-ja.
+    // Régi jegyzeteknél előfordulhat, hogy:
     //
-    // A tag formátuma:
+    // text = régi szöveg
+    // content = üres
     //
-    // USER-<user.id>
+    // Ezért a régi text értékét átmásoljuk content-be.
     //
-    // Például:
-    // USER-1
-    // USER-2
-    // USER-15
+    // ==================================================
+
+    await pool.query(`
+        UPDATE notes
+        SET content = text
+        WHERE
+            text IS NOT NULL
+            AND (
+                content IS NULL
+                OR content = ''
+            )
+            AND text <> '';
+    `);
+
+
+    // ==================================================
+    // CONTENT -> TEXT SZINKRON
+    // ==================================================
     //
-    // FONTOS:
-    // A tag NEM a frontendből érkezik.
-    // A backend generálja.
+    // Biztonsági migráció:
+    // ha content létezik, de text üres,
+    // akkor text is megkapja.
+    //
+    // ==================================================
+
+    await pool.query(`
+        UPDATE notes
+        SET text = content
+        WHERE
+            content IS NOT NULL
+            AND content <> ''
+            AND (
+                text IS NULL
+                OR text = ''
+            );
+    `);
+
+
+    // ==================================================
+    // OWNER TAG KITÖLTÉS
     // ==================================================
 
     await pool.query(`
         UPDATE notes
         SET owner_tag =
             'USER-' || user_id::TEXT
-        WHERE owner_tag IS NULL
-          AND user_id IS NOT NULL;
+        WHERE
+            owner_tag IS NULL
+            AND user_id IS NOT NULL;
     `);
 
 
     // ==================================================
-    // USER_ID -> USERS FOREIGN KEY
+    // USER ID FOREIGN KEY
     // ==================================================
 
     await pool.query(`
@@ -404,9 +471,7 @@ function hashAuthToken(token) {
 // AUTH TOKEN LÉTREHOZÁSA
 // ======================================================
 
-async function createAuthToken(
-    userId
-) {
+async function createAuthToken(userId) {
 
     const token =
         crypto
@@ -502,9 +567,7 @@ function getBearerToken(req) {
 // USER KERESÉSE TOKEN ALAPJÁN
 // ======================================================
 
-async function getUserFromAuthToken(
-    token
-) {
+async function getUserFromAuthToken(token) {
 
     if (!token) {
 
@@ -524,15 +587,17 @@ async function getUserFromAuthToken(
                 u.id,
                 u.username,
                 u.email
+
             FROM auth_tokens t
 
             INNER JOIN users u
                 ON u.id = t.user_id
 
-            WHERE t.token_hash = $1
+            WHERE
+                t.token_hash = $1
 
-              AND t.expires_at >
-                  CURRENT_TIMESTAMP
+                AND t.expires_at >
+                    CURRENT_TIMESTAMP
 
             LIMIT 1
             `,
@@ -558,21 +623,8 @@ async function getUserFromAuthToken(
 // ======================================================
 // ÁLTALÁNOS AUTH
 // ======================================================
-//
-// Ezt használjuk:
-// - auth/me
-// - egyéb általános funkciók
-//
-// Itt továbbra is engedélyezett a session fallback.
-// ======================================================
 
-async function getAuthenticatedUser(
-    req
-) {
-
-    // --------------------------------------------------
-    // BEARER TOKEN
-    // --------------------------------------------------
+async function getAuthenticatedUser(req) {
 
     const bearerToken =
         getBearerToken(req);
@@ -595,9 +647,7 @@ async function getAuthenticatedUser(
     }
 
 
-    // --------------------------------------------------
-    // SESSION FALLBACK
-    // --------------------------------------------------
+    // Session fallback
 
     if (
         req.session &&
@@ -611,8 +661,11 @@ async function getAuthenticatedUser(
                     id,
                     username,
                     email
+
                 FROM users
+
                 WHERE id = $1
+
                 LIMIT 1
                 `,
                 [
@@ -640,11 +693,9 @@ async function getAuthenticatedUser(
 // JEGYZET AUTH
 // ======================================================
 //
-// FONTOS:
+// A NOTES modulban nincs session fallback.
 //
-// A NOTES modul NEM használ session fallbacket.
-//
-// Csak:
+// Kizárólag:
 //
 // Bearer token
 //      ↓
@@ -654,13 +705,9 @@ async function getAuthenticatedUser(
 //      ↓
 // users.id
 //
-// Így a jegyzet tulajdonosa mindig a backend
-// által ellenőrzött tokenhez tartozó user.
 // ======================================================
 
-async function getAuthenticatedNotesUser(
-    req
-) {
+async function getAuthenticatedNotesUser(req) {
 
     const bearerToken =
         getBearerToken(req);
@@ -694,15 +741,12 @@ async function getAuthenticatedNotesUser(
 // OWNER TAG
 // ======================================================
 
-function createOwnerTag(
-    userId
-) {
+function createOwnerTag(userId) {
 
     return (
         "USER-" +
         String(userId)
     );
-
 }
 
 
@@ -715,10 +759,12 @@ app.get(
     function (req, res) {
 
         res.json({
+
             success: true,
 
             message:
                 "Project Hub backend működik."
+
         });
 
     }
@@ -766,10 +812,6 @@ app.post(
                 }
             );
 
-
-            // --------------------------------------------------
-            // VALIDATION
-            // --------------------------------------------------
 
             if (
                 !username ||
@@ -841,10 +883,6 @@ app.post(
             }
 
 
-            // --------------------------------------------------
-            // USERNAME CHECK
-            // --------------------------------------------------
-
             const usernameCheck =
                 await pool.query(
                     `
@@ -876,18 +914,17 @@ app.post(
             }
 
 
-            // --------------------------------------------------
-            // EMAIL CHECK
-            // --------------------------------------------------
-
             const emailCheck =
                 await pool.query(
                     `
                     SELECT id
                     FROM users
-                    WHERE email IS NOT NULL
-                      AND LOWER(email) =
-                          LOWER($1)
+                    WHERE
+                        email IS NOT NULL
+
+                        AND LOWER(email) =
+                            LOWER($1)
+
                     LIMIT 1
                     `,
                     [
@@ -912,20 +949,12 @@ app.post(
             }
 
 
-            // --------------------------------------------------
-            // PASSWORD HASH
-            // --------------------------------------------------
-
             const passwordHash =
                 await bcrypt.hash(
                     password,
                     12
                 );
 
-
-            // --------------------------------------------------
-            // USER LÉTREHOZÁSA
-            // --------------------------------------------------
 
             const result =
                 await pool.query(
@@ -935,11 +964,13 @@ app.post(
                         email,
                         password_hash
                     )
+
                     VALUES (
                         $1,
                         $2,
                         $3
                     )
+
                     RETURNING
                         id,
                         username,
@@ -958,30 +989,19 @@ app.post(
                 result.rows[0];
 
 
-            // --------------------------------------------------
-            // SESSION
-            // --------------------------------------------------
-
             req.session.userId =
                 user.id;
+
 
             req.session.username =
                 user.username;
 
-
-            // --------------------------------------------------
-            // TOKEN
-            // --------------------------------------------------
 
             const token =
                 await createAuthToken(
                     user.id
                 );
 
-
-            // --------------------------------------------------
-            // SESSION SAVE
-            // --------------------------------------------------
 
             await new Promise(
                 function (
@@ -1011,10 +1031,6 @@ app.post(
                 }
             );
 
-
-            // --------------------------------------------------
-            // RESPONSE
-            // --------------------------------------------------
 
             return res.status(201).json({
 
@@ -1094,10 +1110,6 @@ app.post(
             );
 
 
-            // --------------------------------------------------
-            // VALIDATION
-            // --------------------------------------------------
-
             if (
                 !login ||
                 !password
@@ -1115,10 +1127,6 @@ app.post(
             }
 
 
-            // --------------------------------------------------
-            // USER SEARCH
-            // --------------------------------------------------
-
             const result =
                 await pool.query(
                     `
@@ -1127,15 +1135,21 @@ app.post(
                         username,
                         email,
                         password_hash
-                    FROM users
-                    WHERE LOWER(username) =
-                          LOWER($1)
 
-                       OR (
+                    FROM users
+
+                    WHERE
+                        LOWER(username) =
+                        LOWER($1)
+
+                        OR (
+
                             email IS NOT NULL
+
                             AND LOWER(email) =
                                 LOWER($1)
-                          )
+
+                        )
 
                     LIMIT 1
                     `,
@@ -1164,10 +1178,6 @@ app.post(
             const user =
                 result.rows[0];
 
-
-            // --------------------------------------------------
-            // PASSWORD CHECK
-            // --------------------------------------------------
 
             if (
                 !user.password_hash
@@ -1208,30 +1218,19 @@ app.post(
             }
 
 
-            // --------------------------------------------------
-            // SESSION
-            // --------------------------------------------------
-
             req.session.userId =
                 user.id;
+
 
             req.session.username =
                 user.username;
 
-
-            // --------------------------------------------------
-            // TOKEN
-            // --------------------------------------------------
 
             const token =
                 await createAuthToken(
                     user.id
                 );
 
-
-            // --------------------------------------------------
-            // SAVE SESSION
-            // --------------------------------------------------
 
             await new Promise(
                 function (
@@ -1261,10 +1260,6 @@ app.post(
                 }
             );
 
-
-            // --------------------------------------------------
-            // RESPONSE
-            // --------------------------------------------------
 
             return res.json({
 
@@ -1401,10 +1396,6 @@ app.post(
                 getBearerToken(req);
 
 
-            // --------------------------------------------------
-            // TOKEN DELETE
-            // --------------------------------------------------
-
             if (bearerToken) {
 
                 const tokenHash =
@@ -1425,10 +1416,6 @@ app.post(
 
             }
 
-
-            // --------------------------------------------------
-            // SESSION DELETE
-            // --------------------------------------------------
 
             if (req.session) {
 
@@ -1561,15 +1548,16 @@ app.get(
 // NOTES - GET
 // ======================================================
 //
-// A usert KIZÁRÓLAG a Bearer tokenből kapjuk.
+// A user kizárólag a Bearer tokenből származik.
 //
-// Nincs:
-// req.body.user_id
-// req.query.user_id
-// frontend által küldött user ID
+// token
+//   ↓
+// auth_tokens.user_id
+//   ↓
+// users.id
 //
-// A backend maga határozza meg:
-// token -> user.id
+// A frontend semmilyen user ID-t nem határoz meg.
+//
 // ======================================================
 
 app.get(
@@ -1612,7 +1600,9 @@ app.get(
                         user_id,
                         owner_tag,
                         title,
+
                         content,
+
                         category,
                         pinned,
                         created_at,
@@ -1620,9 +1610,10 @@ app.get(
 
                     FROM notes
 
-                    WHERE user_id = $1
+                    WHERE
+                        user_id = $1
 
-                      AND owner_tag = $2
+                        AND owner_tag = $2
 
                     ORDER BY
                         pinned DESC,
@@ -1682,19 +1673,18 @@ app.get(
 // NOTES - CREATE
 // ======================================================
 //
-// FONTOS:
+// A kliens által küldött:
+// - user_id
+// - userId
+// - owner_tag
+// - ownerTag
 //
-// A kliens által küldött user_id-t SOHA nem használjuk.
+// NEM számít.
 //
-// A tulajdonos:
+// A tulajdonos kizárólag:
 //
-// const user = await getAuthenticatedNotesUser(req)
+// token -> users.id
 //
-// majd:
-//
-// user.id
-//
-// kerül az adatbázisba.
 // ======================================================
 
 app.post(
@@ -1723,9 +1713,9 @@ app.post(
             }
 
 
-            // --------------------------------------------------
-            // BACKEND ÁLTAL GENERÁLT TULAJDONOS
-            // --------------------------------------------------
+            // ==================================================
+            // BACKEND ÁLTAL MEGHATÁROZOTT TULAJDONOS
+            // ==================================================
 
             const ownerUserId =
                 user.id;
@@ -1737,9 +1727,9 @@ app.post(
                 );
 
 
-            // --------------------------------------------------
+            // ==================================================
             // USER INPUT
-            // --------------------------------------------------
+            // ==================================================
 
             const title =
                 typeof req.body.title ===
@@ -1752,7 +1742,12 @@ app.post(
                 typeof req.body.content ===
                 "string"
                     ? req.body.content
-                    : "";
+                    : (
+                        typeof req.body.text ===
+                        "string"
+                            ? req.body.text
+                            : ""
+                    );
 
 
             const category =
@@ -1766,9 +1761,9 @@ app.post(
                 req.body.pinned === true;
 
 
-            // --------------------------------------------------
+            // ==================================================
             // VALIDATION
-            // --------------------------------------------------
+            // ==================================================
 
             if (
                 !title ||
@@ -1787,9 +1782,19 @@ app.post(
             }
 
 
-            // --------------------------------------------------
+            // ==================================================
             // CREATE
-            // --------------------------------------------------
+            // ==================================================
+            //
+            // FONTOS:
+            //
+            // text    = content
+            // content = content
+            //
+            // Így a régi DB struktúra és az új API
+            // egyszerre működik.
+            //
+            // ==================================================
 
             const result =
                 await pool.query(
@@ -1798,6 +1803,7 @@ app.post(
                         user_id,
                         owner_tag,
                         title,
+                        text,
                         content,
                         category,
                         pinned
@@ -1809,7 +1815,8 @@ app.post(
                         $3,
                         $4,
                         $5,
-                        $6
+                        $6,
+                        $7
                     )
 
                     RETURNING
@@ -1827,8 +1834,15 @@ app.post(
                         ownerUserId,
                         ownerTag,
                         title,
+
+                        // text
                         content,
+
+                        // content
+                        content,
+
                         category || "Egyéb",
+
                         pinned
                     ]
                 );
@@ -1869,21 +1883,6 @@ app.post(
 
 // ======================================================
 // NOTES - UPDATE
-// ======================================================
-//
-// A jegyzet ID önmagában NEM elegendő.
-//
-// Kötelező:
-//
-// note.id = kérésben lévő ID
-//
-// ÉS
-//
-// note.user_id = tokenből kapott user.id
-//
-// ÉS
-//
-// note.owner_tag = tokenből generált owner tag
 // ======================================================
 
 app.put(
@@ -1944,9 +1943,9 @@ app.put(
                 );
 
 
-            // --------------------------------------------------
+            // ==================================================
             // USER INPUT
-            // --------------------------------------------------
+            // ==================================================
 
             const title =
                 typeof req.body.title ===
@@ -1959,7 +1958,12 @@ app.put(
                 typeof req.body.content ===
                 "string"
                     ? req.body.content
-                    : "";
+                    : (
+                        typeof req.body.text ===
+                        "string"
+                            ? req.body.text
+                            : ""
+                    );
 
 
             const category =
@@ -1973,9 +1977,9 @@ app.put(
                 req.body.pinned === true;
 
 
-            // --------------------------------------------------
+            // ==================================================
             // VALIDATION
-            // --------------------------------------------------
+            // ==================================================
 
             if (
                 !title ||
@@ -1994,17 +1998,19 @@ app.put(
             }
 
 
-            // --------------------------------------------------
+            // ==================================================
             // UPDATE
-            // --------------------------------------------------
+            // ==================================================
             //
-            // Három tulajdonosi ellenőrzés:
+            // Ellenőrzés:
             //
-            // 1. note ID
-            // 2. user_id
-            // 3. owner_tag
+            // ID
+            // +
+            // user_id
+            // +
+            // owner_tag
             //
-            // --------------------------------------------------
+            // ==================================================
 
             const result =
                 await pool.query(
@@ -2013,17 +2019,24 @@ app.put(
 
                     SET
                         title = $1,
-                        content = $2,
-                        category = $3,
-                        pinned = $4,
+
+                        text = $2,
+
+                        content = $3,
+
+                        category = $4,
+
+                        pinned = $5,
+
                         updated_at =
                             CURRENT_TIMESTAMP
 
-                    WHERE id = $5
+                    WHERE
+                        id = $6
 
-                      AND user_id = $6
+                        AND user_id = $7
 
-                      AND owner_tag = $7
+                        AND owner_tag = $8
 
                     RETURNING
                         id,
@@ -2038,11 +2051,21 @@ app.put(
                     `,
                     [
                         title,
+
+                        // text
                         content,
+
+                        // content
+                        content,
+
                         category || "Egyéb",
+
                         pinned,
+
                         noteId,
+
                         ownerUserId,
+
                         ownerTag
                     ]
                 );
@@ -2099,13 +2122,6 @@ app.put(
 
 // ======================================================
 // NOTES - DELETE
-// ======================================================
-//
-// Itt is:
-//
-// ID + user_id + owner_tag
-//
-// alapján történik az ellenőrzés.
 // ======================================================
 
 app.delete(
@@ -2171,11 +2187,12 @@ app.delete(
                     `
                     DELETE FROM notes
 
-                    WHERE id = $1
+                    WHERE
+                        id = $1
 
-                      AND user_id = $2
+                        AND user_id = $2
 
-                      AND owner_tag = $3
+                        AND owner_tag = $3
 
                     RETURNING id
                     `,
