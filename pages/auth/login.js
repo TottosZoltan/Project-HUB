@@ -165,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         function () {
 
                             window.location.href =
-                                "../index.html";
+                                "../../index.html";
 
                         },
                         800
