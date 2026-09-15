@@ -15,11 +15,20 @@ const emptyNotes = document.getElementById("emptyNotes");
 const noteTotal = document.getElementById("noteTotal");
 
 
+// =========================
 // JEGYZETEK BETÖLTÉSE
+// =========================
 
 let notes = JSON.parse(
     localStorage.getItem("projectHubNotes")
 ) || [];
+
+
+// =========================
+// SZERKESZTETT JEGYZET
+// =========================
+
+let editingNoteId = null;
 
 
 // =========================
@@ -30,51 +39,68 @@ function renderNotes() {
 
     notesList.innerHTML = "";
 
-
-    // DARABSZÁM
-
     noteTotal.textContent = `${notes.length} db`;
-
-
-    // HA NINCS JEGYZET
 
     if (notes.length === 0) {
 
         emptyNotes.style.display = "block";
 
         return;
-
     }
-
-
-    // VAN JEGYZET
 
     emptyNotes.style.display = "none";
 
 
     notes.forEach(function (note) {
 
-
         const noteCard = document.createElement("article");
 
         noteCard.className = "note-card";
 
 
-        // JEGYZET FEJLÉC
+        // =========================
+        // FEJLÉC
+        // =========================
 
         const noteHeader = document.createElement("div");
 
         noteHeader.className = "note-card-header";
 
 
-        // CÍM
-
         const title = document.createElement("h3");
 
         title.textContent = note.title;
 
 
-        // TÖRLÉS GOMB
+        // GOMBOK
+
+        const buttons = document.createElement("div");
+
+        buttons.className = "note-buttons";
+
+
+        // SZERKESZTÉS
+
+        const editButton = document.createElement("button");
+
+        editButton.className = "edit-note";
+
+        editButton.textContent = "✏️";
+
+        editButton.type = "button";
+
+
+        editButton.addEventListener(
+            "click",
+            function () {
+
+                editNote(note.id);
+
+            }
+        );
+
+
+        // TÖRLÉS
 
         const deleteButton = document.createElement("button");
 
@@ -95,12 +121,19 @@ function renderNotes() {
         );
 
 
+        buttons.appendChild(editButton);
+
+        buttons.appendChild(deleteButton);
+
+
         noteHeader.appendChild(title);
 
-        noteHeader.appendChild(deleteButton);
+        noteHeader.appendChild(buttons);
 
 
+        // =========================
         // SZÖVEG
+        // =========================
 
         const text = document.createElement("p");
 
@@ -109,7 +142,9 @@ function renderNotes() {
         text.textContent = note.text;
 
 
+        // =========================
         // DÁTUM
+        // =========================
 
         const date = document.createElement("small");
 
@@ -118,7 +153,9 @@ function renderNotes() {
         date.textContent = note.date;
 
 
-        // ÖSSZEÁLLÍTÁS
+        // =========================
+        // KÁRTYA
+        // =========================
 
         noteCard.appendChild(noteHeader);
 
@@ -135,48 +172,88 @@ function renderNotes() {
 
 
 // =========================
-// JEGYZET MENTÉSE
+// ÚJ JEGYZET / SZERKESZTÉS MENTÉSE
 // =========================
 
 saveNoteButton.addEventListener(
     "click",
     function () {
 
-
         const title = noteTitle.value.trim();
 
         const text = noteText.value.trim();
 
 
-        // ÜRES ELLENŐRZÉS
-
         if (title === "" || text === "") {
 
-            alert("Kérlek töltsd ki a címet és a jegyzet szövegét!");
+            alert(
+                "Kérlek töltsd ki a címet és a jegyzet szövegét!"
+            );
 
             return;
+        }
+
+
+        // =========================
+        // SZERKESZTÉS
+        // =========================
+
+        if (editingNoteId !== null) {
+
+            notes = notes.map(function (note) {
+
+                if (note.id === editingNoteId) {
+
+                    return {
+
+                        id: note.id,
+
+                        title: title,
+
+                        text: text,
+
+                        date: new Date().toLocaleString("hu-HU")
+
+                    };
+
+                }
+
+                return note;
+
+            });
+
+
+            editingNoteId = null;
+
+            saveNoteButton.textContent =
+                "💾 Jegyzet mentése";
+
 
         }
 
 
+        // =========================
         // ÚJ JEGYZET
+        // =========================
 
-        const newNote = {
+        else {
 
-            id: Date.now(),
+            const newNote = {
 
-            title: title,
+                id: Date.now(),
 
-            text: text,
+                title: title,
 
-            date: new Date().toLocaleString("hu-HU")
+                text: text,
 
-        };
+                date: new Date().toLocaleString("hu-HU")
+
+            };
 
 
-        // LISTÁHOZ ADÁS
+            notes.unshift(newNote);
 
-        notes.unshift(newNote);
+        }
 
 
         // MENTÉS
@@ -187,14 +264,12 @@ saveNoteButton.addEventListener(
         );
 
 
-        // MEZŐK KIÜRÍTÉSE
+        // MEZŐK ÜRÍTÉSE
 
         noteTitle.value = "";
 
         noteText.value = "";
 
-
-        // LISTA FRISSÍTÉSE
 
         renderNotes();
 
@@ -203,11 +278,55 @@ saveNoteButton.addEventListener(
 
 
 // =========================
+// JEGYZET SZERKESZTÉSE
+// =========================
+
+function editNote(id) {
+
+    const note = notes.find(function (item) {
+
+        return item.id === id;
+
+    });
+
+
+    if (!note) {
+
+        return;
+
+    }
+
+
+    noteTitle.value = note.title;
+
+    noteText.value = note.text;
+
+
+    editingNoteId = id;
+
+
+    saveNoteButton.textContent =
+        "💾 Módosítás mentése";
+
+
+    // VISSZAGÖRGETÉS A SZERKESZTŐHÖZ
+
+    window.scrollTo({
+
+        top: 0,
+
+        behavior: "smooth"
+
+    });
+
+}
+
+
+// =========================
 // JEGYZET TÖRLÉSE
 // =========================
 
 function deleteNote(id) {
-
 
     const confirmed = confirm(
         "Biztosan törölni szeretnéd ezt a jegyzetet?"
