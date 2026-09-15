@@ -161,7 +161,10 @@ async function initializeDatabase() {
             );
 
         `);
-
+await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS password TEXT;
+`);
 
         // =====================================
         // AUTH TOKENS
