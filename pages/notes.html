@@ -2,17 +2,25 @@
 <html lang="hu">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Jegyzetek - Project Hub</title>
 
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="pages.css">
     <link rel="stylesheet" href="notes.css">
+
 </head>
 
+
 <body>
+
 
     <!-- =========================================
          FEJLÉC
@@ -21,24 +29,37 @@
     <header class="header">
 
         <div>
+
             <h1>JEGYZETEK</h1>
+
             <p>Project Hub</p>
+
         </div>
 
-        <a href="../" class="back-button">
+
+        <a
+            href="../"
+            class="back-button"
+        >
+
             <span class="back-arrow"></span>
+
         </a>
 
     </header>
 
 
+
     <!-- =========================================
-         JEGYZETEK OLDAL
+         FŐ TARTALOM
     ========================================= -->
 
     <main class="page-content notes-page">
 
-        <!-- BEVEZETŐ -->
+
+        <!-- =====================================
+             BEVEZETŐ
+        ===================================== -->
 
         <section class="page-intro">
 
@@ -57,11 +78,15 @@
         </section>
 
 
+
         <!-- =====================================
              ÚJ JEGYZET
         ===================================== -->
 
         <section class="notes-editor">
+
+
+            <!-- CÍM -->
 
             <input
                 type="text"
@@ -70,21 +95,150 @@
                 maxlength="100"
             >
 
+
+            <!-- KATEGÓRIA -->
+
+            <select id="noteCategory">
+
+                <option value="Egyéb">
+                    📁 Egyéb
+                </option>
+
+                <option value="Ötlet">
+                    💡 Ötlet
+                </option>
+
+                <option value="Munka">
+                    💼 Munka
+                </option>
+
+                <option value="Személyes">
+                    👤 Személyes
+                </option>
+
+                <option value="Fontos">
+                    ⭐ Fontos
+                </option>
+
+                <option value="Projekt">
+                    🚀 Projekt
+                </option>
+
+            </select>
+
+
+            <!-- SZÖVEG -->
+
             <textarea
                 id="noteText"
                 placeholder="Írd ide a jegyzeted..."
                 rows="7"
             ></textarea>
 
+
+            <!-- MENTÉS -->
+
             <button
                 id="saveNote"
                 class="save-note-button"
                 type="button"
             >
+
                 💾 Jegyzet mentése
+
             </button>
 
         </section>
+
+
+
+        <!-- =====================================
+             KERESÉS + SZŰRÉS
+        ===================================== -->
+
+        <section class="notes-tools">
+
+
+            <!-- KERESÉS -->
+
+            <div class="notes-search">
+
+                <span class="search-icon">
+                    🔍
+                </span>
+
+                <input
+                    type="search"
+                    id="noteSearch"
+                    placeholder="Keresés a jegyzetek között..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+            <!-- SZŰRŐK -->
+
+            <div class="notes-filters">
+
+
+                <select id="categoryFilter">
+
+                    <option value="all">
+                        📁 Minden kategória
+                    </option>
+
+                    <option value="Ötlet">
+                        💡 Ötlet
+                    </option>
+
+                    <option value="Munka">
+                        💼 Munka
+                    </option>
+
+                    <option value="Személyes">
+                        👤 Személyes
+                    </option>
+
+                    <option value="Fontos">
+                        ⭐ Fontos
+                    </option>
+
+                    <option value="Projekt">
+                        🚀 Projekt
+                    </option>
+
+                    <option value="Egyéb">
+                        📁 Egyéb
+                    </option>
+
+                </select>
+
+
+                <select id="sortNotes">
+
+                    <option value="newest">
+                        🕐 Legújabb
+                    </option>
+
+                    <option value="oldest">
+                        🕐 Legrégebbi
+                    </option>
+
+                    <option value="az">
+                        🔤 A → Z
+                    </option>
+
+                    <option value="za">
+                        🔤 Z → A
+                    </option>
+
+                </select>
+
+            </div>
+
+        </section>
+
 
 
         <!-- =====================================
@@ -92,6 +246,9 @@
         ===================================== -->
 
         <section class="notes-section">
+
+
+            <!-- FEJLÉC -->
 
             <div class="section-header">
 
@@ -106,13 +263,17 @@
             </div>
 
 
+
+            <!-- JEGYZETEK -->
+
             <div
                 id="notesList"
                 class="notes-list"
             ></div>
 
 
-            <!-- ÜRES ÁLLAPOT -->
+
+            <!-- NINCS JEGYZET -->
 
             <div
                 id="emptyNotes"
@@ -133,9 +294,34 @@
 
             </div>
 
+
+
+            <!-- NINCS TALÁLAT -->
+
+            <div
+                id="noSearchResults"
+                class="empty-notes no-search-results"
+            >
+
+                <div class="empty-icon">
+                    🔍
+                </div>
+
+                <h3>
+                    Nincs találat
+                </h3>
+
+                <p>
+                    Próbálj más keresést vagy szűrőt.
+                </p>
+
+            </div>
+
+
         </section>
 
     </main>
+
 
 
     <!-- =========================================
@@ -147,8 +333,14 @@
         class="note-modal"
     >
 
+
+        <!-- HÁTTÉR -->
+
         <div class="note-modal-overlay"></div>
 
+
+
+        <!-- KÁRTYA -->
 
         <div
             class="note-modal-card"
@@ -156,13 +348,26 @@
             aria-modal="true"
         >
 
-            <!-- MODAL FEJLÉC -->
+
+            <!-- FEJLÉC -->
 
             <div class="note-modal-header">
 
-                <h2 id="modalNoteTitle">
-                    Jegyzet
-                </h2>
+                <div class="modal-note-heading">
+
+                    <span
+                        id="modalNoteCategory"
+                        class="modal-note-category"
+                    >
+                        📁 Egyéb
+                    </span>
+
+                    <h2 id="modalNoteTitle">
+                        Jegyzet
+                    </h2>
+
+                </div>
+
 
                 <button
                     id="closeNoteModal"
@@ -170,18 +375,22 @@
                     type="button"
                     aria-label="Bezárás"
                 >
+
                     ✕
+
                 </button>
 
             </div>
 
 
-            <!-- TELJES JEGYZET -->
+
+            <!-- SZÖVEG -->
 
             <div
                 id="modalNoteText"
                 class="note-modal-text"
             ></div>
+
 
 
             <!-- DÁTUM -->
@@ -196,10 +405,12 @@
     </div>
 
 
+
     <!-- JAVASCRIPT -->
 
     <script src="../script.js"></script>
     <script src="notes.js"></script>
+
 
 </body>
 
