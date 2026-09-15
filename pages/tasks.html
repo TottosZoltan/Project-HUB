@@ -81,10 +81,38 @@
 
 
         <!-- =====================================
-             ÚJ FELADAT
-        ===================================== -->
+     MODUL GOMBOK
+===================================== -->
 
-        <section class="task-editor">
+<div class="module-actions">
+
+    <button
+        id="toggleTaskEditor"
+        class="module-toggle-button"
+        type="button"
+    >
+        ➕ Új feladat
+    </button>
+
+    <button
+        id="toggleTaskFilters"
+        class="module-toggle-button"
+        type="button"
+    >
+        🔎 Keresés és szűrés
+    </button>
+
+</div>
+
+
+<!-- =====================================
+     ÚJ FELADAT
+===================================== -->
+
+<section
+    class="task-editor collapsible-panel"
+    id="taskEditor"
+>
 
 
             <!-- FELADAT NEVE -->
@@ -282,10 +310,13 @@
 
 
         <!-- =====================================
-             KERESÉS + SZŰRÉS
-        ===================================== -->
+     KERESÉS + SZŰRÉS
+===================================== -->
 
-        <section class="tasks-tools">
+<section
+    class="tasks-tools collapsible-panel"
+    id="taskFilters"
+>
 
 
             <!-- KERESÉS -->
