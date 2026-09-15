@@ -3,18 +3,11 @@
 // BACKEND
 // =========================================
 
-
 const express = require("express");
-
 const cors = require("cors");
-
 const session = require("express-session");
-
-const connectPgSimple =
-    require("connect-pg-simple");
-
+const connectPgSimple = require("connect-pg-simple");
 const { Pool } = require("pg");
-
 const bcrypt = require("bcrypt");
 
 
@@ -22,8 +15,7 @@ const bcrypt = require("bcrypt");
 // EXPRESS
 // =========================================
 
-const app =
-    express();
+const app = express();
 
 
 // =========================================
@@ -52,15 +44,27 @@ const pool =
 
 
 // =========================================
+// PROXY
+// =========================================
+
+app.set(
+    "trust proxy",
+    1
+);
+
+
+// =========================================
 // MIDDLEWARE
 // =========================================
 
 app.use(
     cors({
 
-        origin: true,
+        origin:
+            "https://totti-gamer.github.io",
 
-        credentials: true
+        credentials:
+            true
 
     })
 );
@@ -87,7 +91,8 @@ app.use(
         store:
             new PgSession({
 
-                pool: pool,
+                pool:
+                    pool,
 
                 tableName:
                     "sessions",
@@ -100,17 +105,25 @@ app.use(
         secret:
             process.env.SESSION_SECRET,
 
-        resave: false,
+        resave:
+            false,
 
-        saveUninitialized: false,
+        saveUninitialized:
+            false,
 
         cookie: {
 
-            httpOnly: true,
+            httpOnly:
+                true,
 
-            secure: true,
+            secure:
+                true,
 
-            sameSite: "none",
+            sameSite:
+                "none",
+
+            path:
+                "/",
 
             maxAge:
                 1000 *
@@ -145,7 +158,7 @@ async function initializeDatabase() {
     try {
 
         await pool.query(`
-            
+
             CREATE TABLE IF NOT EXISTS users (
 
                 id SERIAL PRIMARY KEY,
@@ -203,7 +216,8 @@ app.get(
 
         res.json({
 
-            success: true,
+            success:
+                true,
 
             message:
                 "Project Hub backend működik!"
@@ -239,7 +253,8 @@ app.post(
 
                 return res.status(400).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "Minden mező kitöltése kötelező."
@@ -255,7 +270,8 @@ app.post(
 
                 return res.status(400).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "A jelszónak legalább 8 karakteresnek kell lennie."
@@ -295,7 +311,8 @@ app.post(
 
                 return res.status(409).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "Ez a felhasználónév vagy e-mail már használatban van."
@@ -354,7 +371,8 @@ app.post(
 
             res.status(201).json({
 
-                success: true,
+                success:
+                    true,
 
                 message:
                     "A regisztráció sikeres.",
@@ -376,7 +394,8 @@ app.post(
 
             res.status(500).json({
 
-                success: false,
+                success:
+                    false,
 
                 message:
                     "Nem sikerült létrehozni a felhasználót."
@@ -412,7 +431,8 @@ app.post(
 
                 return res.status(400).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "Az e-mail és a jelszó megadása kötelező."
@@ -453,7 +473,8 @@ app.post(
 
                 return res.status(401).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "Hibás e-mail vagy jelszó."
@@ -481,7 +502,8 @@ app.post(
 
                 return res.status(401).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "Hibás e-mail vagy jelszó."
@@ -495,11 +517,12 @@ app.post(
             // SESSION LÉTREHOZÁSA
             // =========================================
 
-                        req.session.userId =
+            req.session.userId =
                 user.id;
 
             req.session.username =
                 user.username;
+
 
             req.session.save(
                 function (sessionError) {
@@ -512,27 +535,44 @@ app.post(
                         );
 
                         return res.status(500).json({
-                            success: false,
+
+                            success:
+                                false,
+
                             message:
                                 "A bejelentkezési munkamenetet nem sikerült elmenteni."
+
                         });
+
                     }
 
+
                     res.json({
-                        success: true,
+
+                        success:
+                            true,
+
                         message:
                             "Sikeres bejelentkezés.",
+
                         user: {
+
                             id:
                                 user.id,
+
                             username:
                                 user.username,
+
                             email:
                                 user.email
+
                         }
+
                     });
+
                 }
             );
+
         }
 
         catch (error) {
@@ -545,7 +585,8 @@ app.post(
 
             res.status(500).json({
 
-                success: false,
+                success:
+                    false,
 
                 message:
                     "Nem sikerült bejelentkezni."
@@ -568,13 +609,20 @@ app.get(
 
         try {
 
+            console.log(
+                "Session ellenőrzés:",
+                req.session
+            );
+
+
             if (
                 !req.session.userId
             ) {
 
                 return res.status(401).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "Nincs bejelentkezett felhasználó."
@@ -616,7 +664,8 @@ app.get(
 
                 return res.status(401).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "A felhasználó nem található."
@@ -628,7 +677,8 @@ app.get(
 
             res.json({
 
-                success: true,
+                success:
+                    true,
 
                 user:
                     result.rows[0]
@@ -647,7 +697,8 @@ app.get(
 
             res.status(500).json({
 
-                success: false,
+                success:
+                    false,
 
                 message:
                     "Nem sikerült lekérni a felhasználói adatokat."
@@ -681,7 +732,8 @@ app.post(
 
                     return res.status(500).json({
 
-                        success: false,
+                        success:
+                            false,
 
                         message:
                             "Nem sikerült kijelentkezni."
@@ -692,13 +744,18 @@ app.post(
 
 
                 res.clearCookie(
-                    "connect.sid"
+                    "connect.sid",
+                    {
+                        path:
+                            "/"
+                    }
                 );
 
 
                 res.json({
 
-                    success: true,
+                    success:
+                        true,
 
                     message:
                         "Sikeres kijelentkezés."
@@ -730,7 +787,8 @@ app.get(
 
             res.json({
 
-                success: true,
+                success:
+                    true,
 
                 message:
                     "PostgreSQL kapcsolat működik.",
@@ -752,7 +810,8 @@ app.get(
 
             res.status(500).json({
 
-                success: false,
+                success:
+                    false,
 
                 message:
                     "Nem sikerült kapcsolódni az adatbázishoz."
@@ -782,7 +841,8 @@ app.get(
 
                 return res.status(500).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "A Steam API beállítások hiányoznak."
@@ -830,7 +890,8 @@ app.get(
 
             res.json({
 
-                success: true,
+                success:
+                    true,
 
                 data:
                     data.response || {}
@@ -849,7 +910,8 @@ app.get(
 
             res.status(500).json({
 
-                success: false,
+                success:
+                    false,
 
                 message:
                     "Nem sikerült lekérni a Steam adatokat."
