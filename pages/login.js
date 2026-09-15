@@ -141,6 +141,13 @@ document.addEventListener(
                     console.log(
                         "Bejelentkezett felhasználó:",
                         result.user
+
+                        setTimeout(function () {
+
+    window.location.href = "../index.html";
+
+}, 800);
+                        
                     );
 const meResponse = await fetch(
     BACKEND_URL + "/api/auth/me",
