@@ -1,0 +1,182 @@
+/* =========================
+   PROJECT HUB - PAGES
+   KÖZÖS OLDAL STÍLUS
+========================= */
+
+
+/* =========================
+   OLDAL ALAPOK
+========================= */
+
+.page-content {
+    width: 100%;
+    max-width: 700px;
+
+    margin: auto;
+
+    padding: 25px 18px 50px;
+}
+
+
+/* =========================
+   VISSZA GOMB
+========================= */
+
+.back-button {
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    margin: 0;
+
+    border: 1px solid #292d38;
+    border-radius: 12px;
+
+    background: #151820;
+    color: #ffffff;
+
+    text-decoration: none;
+
+    flex-shrink: 0;
+
+    transition: 0.2s;
+}
+
+.back-button:active {
+    transform: scale(0.92);
+
+    background: #20242e;
+}
+
+
+/* =========================
+   VISSZA NYÍL
+========================= */
+
+.back-arrow {
+    position: relative;
+
+    width: 18px;
+    height: 18px;
+
+    display: block;
+}
+
+
+/* VÍZSZINTES SZÁR */
+
+.back-arrow::after {
+    content: "";
+
+    position: absolute;
+
+    width: 18px;
+    height: 3px;
+
+    background: #ffffff;
+
+    left: 0;
+    top: 7px;
+
+    border-radius: 2px;
+}
+
+
+/* NYÍLHEGY */
+
+.back-arrow::before {
+    content: "";
+
+    position: absolute;
+
+    width: 9px;
+    height: 9px;
+
+    border-left: 3px solid #ffffff;
+    border-bottom: 3px solid #ffffff;
+
+    left: 1px;
+    top: 3px;
+
+    transform: rotate(45deg);
+
+    border-radius: 1px;
+}
+
+
+/* =========================
+   OLDAL CÍM
+========================= */
+
+.page-intro {
+    padding: 25px 5px 30px;
+}
+
+.page-intro .small-title {
+    color: #737987;
+
+    font-size: 11px;
+    font-weight: bold;
+
+    letter-spacing: 2px;
+
+    margin-bottom: 8px;
+}
+
+.page-intro h2 {
+    font-size: 28px;
+
+    margin-bottom: 8px;
+}
+
+.page-intro p {
+    color: #858b99;
+}
+
+
+/* =========================
+   KÖZÖS SZEKCIÓ
+========================= */
+
+.page-section {
+    margin-top: 10px;
+
+    padding: 20px;
+
+    background: #151820;
+
+    border: 1px solid #222631;
+
+    border-radius: 18px;
+}
+
+
+/* =========================
+   MOBIL
+========================= */
+
+@media (max-width: 699px) {
+
+    .page-content {
+        padding-top: 20px;
+    }
+
+}
+
+
+/* =========================
+   NAGYOBB KIJELZŐ
+========================= */
+
+@media (min-width: 700px) {
+
+    .page-header {
+        padding-left: calc((100% - 700px) / 2 + 18px);
+        padding-right: calc((100% - 700px) / 2 + 18px);
+    }
+
+}
