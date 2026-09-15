@@ -1,1 +1,171 @@
+<!DOCTYPE html>
+<html lang="hu">
 
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Regisztráció - Project Hub</title>
+
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="pages.css">
+    <link rel="stylesheet" href="register.css">
+</head>
+
+<body>
+
+    <header class="header">
+
+        <div>
+            <h1>REGISZTRÁCIÓ</h1>
+            <p>Project Hub</p>
+        </div>
+
+        <a
+            href="../"
+            class="back-button"
+        >
+            <span class="back-arrow"></span>
+        </a>
+
+    </header>
+
+
+    <main class="page-content register-page">
+
+        <section class="page-intro">
+
+            <p class="small-title">
+                PROJECT HUB
+            </p>
+
+            <h2>
+                👤 Fiók létrehozása
+            </h2>
+
+            <p>
+                Hozd létre a saját Project Hub fiókodat.
+            </p>
+
+        </section>
+
+
+        <section class="page-section register-section">
+
+            <form id="registerForm">
+
+                <div class="form-group">
+
+                    <label for="username">
+                        Felhasználónév
+                    </label>
+
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        placeholder="pl. Totti"
+                        autocomplete="username"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="email">
+                        E-mail cím
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="pelda@email.com"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="password">
+                        Jelszó
+                    </label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Legalább 8 karakter"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="passwordConfirm">
+                        Jelszó megerősítése
+                    </label>
+
+                    <input
+                        type="password"
+                        id="passwordConfirm"
+                        name="passwordConfirm"
+                        placeholder="Jelszó újra"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                </div>
+
+
+                <div
+                    id="registerMessage"
+                    class="register-message"
+                ></div>
+
+
+                <button
+                    type="submit"
+                    id="registerButton"
+                    class="register-button"
+                >
+                    Regisztráció
+                </button>
+
+            </form>
+
+        </section>
+
+
+        <section class="register-login">
+
+            <p>
+                Már van fiókod?
+            </p>
+
+            <a href="login.html">
+                Bejelentkezés
+            </a>
+
+        </section>
+
+    </main>
+
+
+    <script src="register.js"></script>
+
+</body>
+
+</html>
