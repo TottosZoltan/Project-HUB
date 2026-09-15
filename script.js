@@ -169,6 +169,120 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =========================================
+    // TOAST ÉRTESÍTÉS
+    // =========================================
+
+    function showToast(message) {
+
+        const oldToast =
+            document.getElementById("projectHubToast");
+
+        if (oldToast) {
+
+            oldToast.remove();
+
+        }
+
+
+        const toast =
+            document.createElement("div");
+
+        toast.id =
+            "projectHubToast";
+
+        toast.textContent =
+            message;
+
+
+        toast.style.position =
+            "fixed";
+
+        toast.style.left =
+            "50%";
+
+        toast.style.bottom =
+            "30px";
+
+        toast.style.transform =
+            "translateX(-50%) translateY(20px)";
+
+        toast.style.background =
+            "#151820";
+
+        toast.style.color =
+            "#ffffff";
+
+        toast.style.border =
+            "1px solid #292d38";
+
+        toast.style.borderRadius =
+            "12px";
+
+        toast.style.padding =
+            "13px 20px";
+
+        toast.style.fontSize =
+            "14px";
+
+        toast.style.fontWeight =
+            "600";
+
+        toast.style.boxShadow =
+            "0 10px 30px rgba(0,0,0,0.35)";
+
+        toast.style.zIndex =
+            "99999";
+
+        toast.style.opacity =
+            "0";
+
+        toast.style.transition =
+            "opacity 0.25s ease, transform 0.25s ease";
+
+        toast.style.textAlign =
+            "center";
+
+        toast.style.pointerEvents =
+            "none";
+
+
+        document.body.appendChild(toast);
+
+
+        // Megjelenés
+
+        requestAnimationFrame(
+            function () {
+
+                toast.style.opacity =
+                    "1";
+
+                toast.style.transform =
+                    "translateX(-50%) translateY(0)";
+
+            }
+        );
+
+
+        // Eltüntetés
+
+        setTimeout(
+            function () {
+
+                toast.style.opacity =
+                    "0";
+
+                toast.style.transform =
+                    "translateX(-50%) translateY(20px)";
+
+            },
+            750
+        );
+
+    }
+
+
+    // =========================================
     // TOKEN LEKÉRÉSE
     // =========================================
 
@@ -463,10 +577,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 // =================================
+                // VISSZAJELZÉS
+                // =================================
+
+                showToast(
+                    "✅ Sikeresen kijelentkeztél!"
+                );
+
+
+                // =================================
                 // OLDAL FRISSÍTÉSE
                 // =================================
 
-                window.location.reload();
+                setTimeout(
+                    function () {
+
+                        window.location.reload();
+
+                    },
+                    1000
+                );
 
             }
         );
