@@ -1,3 +1,4 @@
+```javascript
 document.addEventListener(
     "DOMContentLoaded",
     function () {
@@ -83,6 +84,10 @@ document.addEventListener(
 
                 try {
 
+                    // =========================================
+                    // LOGIN KÉRÉS
+                    // =========================================
+
                     const response =
                         await fetch(
                             BACKEND_URL +
@@ -99,7 +104,7 @@ document.addEventListener(
                                 },
 
                                 credentials: "include",
-                                
+
                                 body:
                                     JSON.stringify({
 
@@ -130,7 +135,7 @@ document.addEventListener(
 
 
                     // =========================================
-                    // SIKER
+                    // SIKERES BEJELENTKEZÉS
                     // =========================================
 
                     showSuccess(
@@ -141,28 +146,65 @@ document.addEventListener(
                     console.log(
                         "Bejelentkezett felhasználó:",
                         result.user
-
-                        setTimeout(function () {
-
-    window.location.href = "../index.html";
-
-}, 800);
-                        
                     );
-const meResponse = await fetch(
-    BACKEND_URL + "/api/auth/me",
-    {
-        method: "GET",
-        credentials: "include"
-    }
-);
 
-const meResult = await meResponse.json();
 
-console.log(
-    "Session ellenőrzés:",
-    meResult
-);
+                    // =========================================
+                    // SESSION ELLENŐRZÉS
+                    // =========================================
+
+                    const meResponse =
+                        await fetch(
+                            BACKEND_URL +
+                            "/api/auth/me",
+                            {
+                                method: "GET",
+
+                                credentials:
+                                    "include"
+                            }
+                        );
+
+
+                    const meResult =
+                        await meResponse.json();
+
+
+                    console.log(
+                        "Session ellenőrzés:",
+                        meResult
+                    );
+
+
+                    // =========================================
+                    // SESSION SIKERES
+                    // =========================================
+
+                    if (
+                        meResponse.ok &&
+                        meResult.success &&
+                        meResult.user
+                    ) {
+
+                        setTimeout(
+                            function () {
+
+                                window.location.href =
+                                    "../index.html";
+
+                            },
+                            800
+                        );
+
+                    }
+
+                    else {
+
+                        showError(
+                            "A bejelentkezés sikerült, de a munkamenetet nem sikerült ellenőrizni."
+                        );
+
+                    }
 
                 }
 
@@ -246,3 +288,4 @@ console.log(
 
     }
 );
+```
