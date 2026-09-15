@@ -7,7 +7,7 @@
 
 
 /* =========================================
-   JEGYZETEK OLDAL
+   JEGYZET OLDAL
 ========================================= */
 
 .notes-page {
@@ -21,7 +21,7 @@
 
 
 /* =========================================
-   ÚJ JEGYZET SZERKESZTŐ
+   ÚJ JEGYZET
 ========================================= */
 
 .notes-editor {
@@ -49,11 +49,14 @@
 
 
 /* =========================================
-   INPUT + TEXTAREA
+   INPUTOK
 ========================================= */
 
 .notes-editor input,
-.notes-editor textarea {
+.notes-editor textarea,
+.notes-editor select,
+.notes-search input,
+.notes-filters select {
 
     width: 100%;
 
@@ -88,20 +91,43 @@
 
 
 .notes-editor input::placeholder,
-.notes-editor textarea::placeholder {
+.notes-editor textarea::placeholder,
+.notes-search input::placeholder {
 
     color: #626876;
 }
 
 
 .notes-editor input:focus,
-.notes-editor textarea:focus {
+.notes-editor textarea:focus,
+.notes-editor select:focus,
+.notes-search input:focus,
+.notes-filters select:focus {
 
     border-color: #454b5a;
 
     background: #11141b;
 }
 
+
+/* =========================================
+   SELECT
+========================================= */
+
+.notes-editor select,
+.notes-filters select {
+
+    appearance: none;
+
+    -webkit-appearance: none;
+
+    cursor: pointer;
+}
+
+
+/* =========================================
+   TEXTAREA
+========================================= */
 
 .notes-editor textarea {
 
@@ -116,7 +142,7 @@
 
 
 /* =========================================
-   JEGYZET MENTÉSE GOMB
+   MENTÉS
 ========================================= */
 
 .save-note-button {
@@ -160,7 +186,81 @@
 
 
 /* =========================================
-   MENTETT JEGYZETEK
+   KERESÉS + SZŰRÉS
+========================================= */
+
+.notes-tools {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+
+    width: 100%;
+
+    margin-top: 18px;
+
+    min-width: 0;
+}
+
+
+/* =========================================
+   KERESŐ
+========================================= */
+
+.notes-search {
+
+    position: relative;
+
+    width: 100%;
+
+    min-width: 0;
+}
+
+
+.notes-search input {
+
+    padding-left: 43px;
+}
+
+
+.search-icon {
+
+    position: absolute;
+
+    left: 14px;
+
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    font-size: 16px;
+
+    pointer-events: none;
+}
+
+
+/* =========================================
+   SZŰRŐK
+========================================= */
+
+.notes-filters {
+
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 10px;
+
+    width: 100%;
+
+    min-width: 0;
+}
+
+
+/* =========================================
+   JEGYZET SZEKCIÓ
 ========================================= */
 
 .notes-section {
@@ -176,7 +276,7 @@
 
 
 /* =========================================
-   SZEKCIÓ FEJLÉC
+   FEJLÉC
 ========================================= */
 
 .section-header {
@@ -220,7 +320,7 @@
 
 
 /* =========================================
-   JEGYZET LISTA
+   LISTA
 ========================================= */
 
 .notes-list {
@@ -242,6 +342,8 @@
 ========================================= */
 
 .note-card {
+
+    position: relative;
 
     width: 100%;
 
@@ -285,7 +387,19 @@
 
 
 /* =========================================
-   JEGYZET FEJLÉC
+   RÖGZÍTETT JEGYZET
+========================================= */
+
+.note-card.pinned-note {
+
+    border-color: #3a3e4a;
+
+    background: #171a22;
+}
+
+
+/* =========================================
+   KÁRTYA FEJLÉC
 ========================================= */
 
 .note-card-header {
@@ -306,7 +420,25 @@
 }
 
 
-.note-card-header h3 {
+/* =========================================
+   CÍM TERÜLET
+========================================= */
+
+.note-title-area {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 7px;
+
+    flex: 1;
+
+    min-width: 0;
+}
+
+
+.note-title-area h3 {
 
     flex: 1;
 
@@ -329,7 +461,21 @@
 
 
 /* =========================================
-   JEGYZET GOMBOK
+   RÖGZÍTÉS JELZŐ
+========================================= */
+
+.pin-indicator {
+
+    flex-shrink: 0;
+
+    font-size: 14px;
+
+    line-height: 1.4;
+}
+
+
+/* =========================================
+   GOMBOK
 ========================================= */
 
 .note-buttons {
@@ -338,21 +484,24 @@
 
     align-items: center;
 
-    gap: 6px;
+    gap: 5px;
 
     flex-shrink: 0;
 }
 
 
+.pin-note,
 .edit-note,
 .delete-note {
 
-    width: 36px;
-    height: 36px;
+    width: 34px;
+
+    height: 34px;
 
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     flex-shrink: 0;
@@ -361,25 +510,32 @@
 
     border: 1px solid #292d38;
 
-    border-radius: 10px;
+    border-radius: 9px;
 
     background: #20242e;
 
     cursor: pointer;
 
+    font-size: 14px;
+
     transition:
         transform 0.15s ease,
-        background 0.15s ease;
+        background 0.15s ease,
+        border-color 0.15s ease;
 }
 
 
+.pin-note:hover,
 .edit-note:hover,
 .delete-note:hover {
 
     background: #292e3a;
+
+    border-color: #343946;
 }
 
 
+.pin-note:active,
 .edit-note:active,
 .delete-note:active {
 
@@ -388,7 +544,35 @@
 
 
 /* =========================================
-   JEGYZET RÖVID ELŐNÉZET
+   KATEGÓRIA
+========================================= */
+
+.note-category {
+
+    display: inline-block;
+
+    margin-top: 11px;
+
+    padding: 5px 9px;
+
+    box-sizing: border-box;
+
+    border: 1px solid #292d38;
+
+    border-radius: 8px;
+
+    background: #101319;
+
+    color: #858b99;
+
+    font-size: 11px;
+
+    line-height: 1.2;
+}
+
+
+/* =========================================
+   RÖVID SZÖVEG
 ========================================= */
 
 .note-card-text {
@@ -446,7 +630,7 @@
 
 
 /* =========================================
-   ÜRES JEGYZETEK
+   ÜRES ÁLLAPOT
 ========================================= */
 
 .empty-notes {
@@ -490,7 +674,17 @@
 
 
 /* =========================================
-   TELJES JEGYZET MODAL
+   KERESÉSI ÜRES ÁLLAPOT
+========================================= */
+
+.no-search-results {
+
+    display: none;
+}
+
+
+/* =========================================
+   MODAL
 ========================================= */
 
 .note-modal {
@@ -504,6 +698,7 @@
     display: none;
 
     align-items: center;
+
     justify-content: center;
 
     padding: 20px;
@@ -599,13 +794,17 @@
 }
 
 
-.note-modal-header h2 {
+.modal-note-heading {
 
     flex: 1;
 
     min-width: 0;
+}
 
-    margin: 0;
+
+.modal-note-heading h2 {
+
+    margin: 6px 0 0;
 
     color: #ffffff;
 
@@ -620,17 +819,43 @@
 
 
 /* =========================================
-   MODAL BEZÁRÁS
+   MODAL KATEGÓRIA
+========================================= */
+
+.modal-note-category {
+
+    display: inline-block;
+
+    padding: 5px 9px;
+
+    border: 1px solid #292d38;
+
+    border-radius: 8px;
+
+    background: #101319;
+
+    color: #858b99;
+
+    font-size: 11px;
+
+    line-height: 1.2;
+}
+
+
+/* =========================================
+   BEZÁRÁS
 ========================================= */
 
 .close-note-modal {
 
     width: 38px;
+
     height: 38px;
 
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     flex-shrink: 0;
@@ -668,7 +893,7 @@
 
 
 /* =========================================
-   TELJES JEGYZET SZÖVEGE
+   MODAL SZÖVEG
 ========================================= */
 
 .note-modal-text {
@@ -726,7 +951,7 @@
 
 
 /* =========================================
-   MODAL KÖZBEN OLDAL SCROLL LEZÁRÁSA
+   OLDAL SCROLL LEZÁRÁSA
 ========================================= */
 
 body.note-modal-open {
@@ -741,9 +966,16 @@ body.note-modal-open {
 
 @media (max-width: 500px) {
 
+
     .notes-editor {
 
         padding: 15px;
+    }
+
+
+    .notes-filters {
+
+        grid-template-columns: 1fr;
     }
 
 
@@ -753,9 +985,33 @@ body.note-modal-open {
     }
 
 
-    .note-card-header h3 {
+    .note-card-header {
+
+        gap: 7px;
+    }
+
+
+    .note-title-area h3 {
 
         font-size: 16px;
+    }
+
+
+    .note-buttons {
+
+        gap: 4px;
+    }
+
+
+    .pin-note,
+    .edit-note,
+    .delete-note {
+
+        width: 32px;
+
+        height: 32px;
+
+        font-size: 13px;
     }
 
 
@@ -766,7 +1022,7 @@ body.note-modal-open {
 
 
     /* ==============================
-       MODAL MOBIL
+       MODAL
     ============================== */
 
     .note-modal {
@@ -785,7 +1041,7 @@ body.note-modal-open {
     }
 
 
-    .note-modal-header h2 {
+    .modal-note-heading h2 {
 
         font-size: 18px;
     }
